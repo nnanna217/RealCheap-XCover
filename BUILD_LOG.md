@@ -24,8 +24,9 @@ Chronological record of how this prototype was built with an LLM coding harness 
 **Asked:** see `PROMPTS.md` P1.
 
 **Assumptions surfaced before coding:**
-1. "No `adyen` in `git grep`" was read as *code and config* — `README.md`, `BUILD_LOG.md`, `CLAUDE.md` deliberately keep the word because they document the repo's origin. `package-lock.json` regenerated clean.
-2. The webhook handler could not be "kept" literally: its HMAC validator *was* the Adyen library. Kept the route and its shape (verify → process → 200; 500 on error so the sender retries) and replaced the validator with XCover's documented webhook scheme — HMAC over `date: <Date>` with the algorithm named in the `Authorization` header, timing-safe compare. Added as `verifyXcoverWebhook()` in `lib/xcover-auth.js` next to the outbound signer, since it is the same scheme reversed.
+
+1. "No `adyen` in `git grep`" was read as _code and config_ — `README.md`, `BUILD_LOG.md`, `CLAUDE.md` deliberately keep the word because they document the repo's origin. `package-lock.json` regenerated clean.
+2. The webhook handler could not be "kept" literally: its HMAC validator _was_ the Adyen library. Kept the route and its shape (verify → process → 200; 500 on error so the sender retries) and replaced the validator with XCover's documented webhook scheme — HMAC over `date: <Date>` with the algorithm named in the `Authorization` header, timing-safe compare. Added as `verifyXcoverWebhook()` in `lib/xcover-auth.js` next to the outbound signer, since it is the same scheme reversed.
 3. The verify criterion forced two files beyond the two named: `public/checkout.html` (Adyen CSS/JS tags) and `test-webhook.js` (an Adyen sample-payload script, now orphaned — deleted).
 
 **Removed:** Adyen lazy-loader, `getCheckoutAPI`, `/api/config` (only served Adyen keys), `/api/sessions`, the CORS middleware (its own comment said it existed for Adyen's hosted Drop-in; this app is same-origin), Drop-in mount + tags, `@adyen/api-library` dependency.
@@ -34,15 +35,16 @@ Chronological record of how this prototype was built with an LLM coding harness 
 
 **Verified:** `npm start` boots; `GET /` serves (express.static answers with `index.html` before the redirect route — pre-existing behaviour, left alone); `GET /api/status` 200; `POST /api/webhooks` with a correctly signed request → 200 `[accepted]`, with a tampered signature → 401. `git grep -i adyen -- ':!*.md' ':!package-lock.json'` → none; lockfile → 0 matches.
 
-**Manual:** *(candidate to fill after reviewing the diff — what you changed or would change, and why.)*
+**Manual:** _(candidate to fill after reviewing the diff — what you changed or would change, and why.)_
 
-**Re-add later?** Yes, possible: payment collection is Single Payment on RealCheap's side per the XCover payment guide, so Adyen would only ever be the mock PSP behind the "Pay" button. Deliberately out of scope until the protection flow is complete.
+**Re-add Adyen later?** Yes, possible: payment collection is Single Payment on RealCheap's side per the XCover payment guide, so Adyen would only ever be the mock PSP behind the "Pay" button. Deliberately out of scope until the protection flow is complete.
 
 ## P2 — 2026-09-13 — Catalog (agent: Claude Code)
 
 **Asked:** see `PROMPTS.md` P2.
 
 **Assumptions surfaced before coding:**
+
 1. `products.js` has to serve two consumers — the browser now, and `server.js` in P3 (to build the offer `context` from the SKU). Put it at `public/js/products.js` as a browser global with a two-line CommonJS tail, rather than two copies of the same list.
 2. No laptop images exist yet (the candidate will generate them). Shipped three labelled SVG placeholders under `public/images/laptops/<sku>.svg` so nothing renders broken; swapping in PNGs later is a one-field change per product. The makeup image folder was orphaned by the change and removed.
 3. The old product page was a six-image carousel hard-wired to the makeup photos. With one image per SKU a carousel is dead weight — replaced with a single image; the carousel CSS is left in place (pre-existing, not mine to prune).
@@ -52,5 +54,23 @@ Chronological record of how this prototype was built with an LLM coding harness 
 **Left alone:** the unreachable `/` → `/product.html` redirect in `server.js` (express.static answers first; pre-existing) and `checkout.html`'s MakeupShop title — both are P4.
 
 **Verified in a browser:** catalog shows three cards with the right prices; clicking the sleeve opens `product.html?sku=RC-SL-004` with its details; Buy Now lands on `checkout.html?sku=RC-SL-004&qty=1`; `?sku=DOES-NOT-EXIST` shows the inline error with a link back. Module loads under Node too (`findProduct` returns the product / `null`).
+
+**Manual:** _(candidate to fill after reviewing the diff.)_
+
+## P3 — 2026-09-13 — Offer proxy, fixture mode (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P3.
+
+**Assumptions surfaced before coding:**
+1. **The verify command as written returns 400, not the fixture.** `curl -X POST localhost:3000/api/offers` sends no body, and the route needs a `sku` to build a request. Defaulting to a demo product silently would hide a real client bug, so the route validates and the verify becomes `curl -X POST localhost:3000/api/offers -H 'Content-Type: application/json' -d '{"sku":"RC-LT-549"}'`.
+2. **The client never sends a price.** Body is `{ sku, qty, country, currency, language }`; price and category are looked up server-side from `products.js`. A client-supplied price is the first thing a partner's engineer would flag.
+3. **`context` is provisional.** The real field names come from the `E3CCM` offer schema (asked the CSE). Shape carries what any retail rating needs — `items[{sku,name,category,unit_price,quantity}]`, `order_total` — and is labelled PROVISIONAL in the code. Expect to rename fields, not restructure, when the schema arrives.
+4. **`partner.transaction_id` is generated per cart** (`RC-…`). It is RealCheap's natural order key — the thing a retry must reuse so a re-sent create/confirm can't double-issue. Nothing enforces that yet; it's the hook for it.
+5. **Envelope, not raw response.** `/api/offers` returns `{ mode, ok, status, elapsed_ms, request:{method,url,headers,body}, response, error? }` so the P5 payload panel can show exactly what was sent and received. `Authorization` and `X-Api-Key` are redacted to `***` before the envelope leaves the server. In fixture mode the request (and the signed headers) are still built, so the panel shows the real shape.
+6. `XCOVER_MODE` defaults to `fixture` when unset — safe default, live needs credentials. Timeout is `XCOVER_TIMEOUT_MS` (8000 default); a timeout or network error comes back as `ok:false, status:0, error:"…"` with HTTP 502, which is what P7's fail-open will key on.
+
+**Added:** `lib/xcover-client.js` (`call(method, path, body, fixtureFile)` — one function for every XCover endpoint, so confirm / opt-out / cancel reuse it), `POST /api/offers`, `XCOVER_MODE` + `XCOVER_TIMEOUT_MS` in `.env.example`. Node 21's global `fetch` — no HTTP dependency added.
+
+**Verified:** fixture mode → 200, `mode:"fixture"`, request body shows `customer{CA/CAD}`, `context.items[0].quantity:2`, `order_total:1098`, headers redacted, fixture offer id and `$49.99` in the response. Missing sku → 400. **Live mode against the still-blocked staging** → 502 with `error:"timeout after 4000ms"`, `elapsed_ms:4002`, envelope intact — the failure path works before the success path has ever been seen.
 
 **Manual:** *(candidate to fill after reviewing the diff.)*
