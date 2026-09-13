@@ -32,9 +32,11 @@ app.post("/api/offers", async (req, res) => {
   const quantity = Math.max(1, parseInt(qty, 10) || 1);
 
   // Request shape: partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer
-  // (the schema Cover Genius pointed to). `schema` is REQUIRED; the identifier itself comes from the CSE.
+  // (the schema Cover Genius pointed to). `schema` names server-side config on the partner; if omitted the
+  // partner's default schema is used, so it is only sent when XCOVER_SCHEMA is set. A 422
+  // `offer_validation_schema_required` from staging is the signal to ask the CSE for the identifier.
   const offerRequest = {
-    schema: process.env.XCOVER_SCHEMA || "TODO-from-CSE",
+    ...(process.env.XCOVER_SCHEMA ? { schema: process.env.XCOVER_SCHEMA } : {}),
     customer: { language, currency, country },
     context: {
       purchase_date: new Date().toISOString(),
