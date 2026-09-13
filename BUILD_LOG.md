@@ -96,3 +96,20 @@ Candidate flagged that the scope table put idempotency on the refund/cancel step
 ## 2026-09-13 — Schema identifier: omit rather than guess (manual)
 
 The retail create-offer doc says the CSE provides the identifier *and* that the partner default is used when the field is omitted; its `acme-schema-v1` is an example value, not a real default. Changed `/api/offers` to send `schema` only when `XCOVER_SCHEMA` is set. First live call goes without it; a 422 `offer_validation_schema_required` is the trigger to ask. Removed the question from the email. Webhook finding recorded alongside: the Offers API documents `BOOKING_CREATED/UPDATED/CANCELLED` and `RENEWAL_*` events only — no claim-status event; claims are XClaim's surface. Asking the CSE which webhook carries claim status, and whether a staging listener can be registered.
+
+## P4 — 2026-09-13 — Checkout page (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P4.
+
+**Assumptions surfaced before coding:**
+1. The plan's "initial state from `product_rules[0].initial_state`" no longer applies — the retail response has no `product_rules` (see the 09-13 correction). The offer starts *undecided*; Continue is disabled until the shopper accepts or declines, and enabled immediately when there is no offer to decide on.
+2. Rendered from the retail shape: `content.heading/sub_heading/description/price_unit/positive_cta/negative_cta/negative_cta_warning/credibility_message/disclaimer`, `products[0].name`, `products[0].details.benefits[]`, `finance.price.total_amount_formatted`, `pds_url`. Nothing about the offer is hard-coded in the page.
+3. Country drives `customer{country, currency, language}` (US/CA/GB→en, IT→it, FR→fr, ES→es, DE→de). Changing quantity or country re-quotes and **resets the opt-in decision** — a new quote is a new offer and the price may differ.
+4. **Idempotency rule 1 implemented.** `/api/offers` now accepts `transaction_id`, validates its shape, mints one only when the cart has none, and returns it in the envelope; the page stores it in `sessionStorage` under `rc.txn.<sku>` and sends it on every call. This fixes the P3 bug.
+5. Decline is UI state only in P4; the opt-out API call is P6. Payment and confirm are later steps — Continue is wired but inert, and the page says so.
+
+**Found while verifying, fixed before commit:** the first version formatted RealCheap's USD list price with the selected country's currency symbol — `$549 × 3` displayed as `€1,647.00`. A relabel, not a conversion. Fixed: the product line is always USD (its list currency), the offer line uses the currency XCover returns, and the total only sums when both are USD; otherwise it shows the two amounts side by side rather than inventing an FX rate. That is consideration #5 surfacing as a real design question — settlement per currency — instead of being hidden by a symbol swap.
+
+**Verified in a browser:** offer renders from the fixture with the API-supplied CTAs; accept adds the protection line and enables Continue (`$549 + $49.99 = $598.99`); qty 1→3 re-fetches and resets the decision; country US→DE re-fetches with `customer{de,EUR,DE}`; qty 2 → `$49.99 × 2 = $99.98`; three `POST /api/offers` observed for load/qty/country; **order ref identical across all re-quotes and a full page reload** (`sessionStorage`); server rejects a malformed `transaction_id` and mints a fresh one.
+
+**Manual:** *(candidate to fill after reviewing the diff.)*

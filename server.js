@@ -26,10 +26,15 @@ app.get("/api/status", (req, res) => {
 // POST /api/offers - create an XCover offer for the cart
 // Body: { sku, qty, country, currency, language }. Price and category come from the catalog, never the client.
 app.post("/api/offers", async (req, res) => {
-  const { sku, qty = 1, country = "US", currency = "USD", language = "en" } = req.body || {};
+  const { sku, qty = 1, country = "US", currency = "USD", language = "en", transaction_id } = req.body || {};
   const product = findProduct(sku);
   if (!product) return res.status(400).json({ error: "unknown or missing sku", sku });
   const quantity = Math.max(1, parseInt(qty, 10) || 1);
+  // Idempotency rule 1: one order reference per cart. The browser sends back the one it was given;
+  // a new one is minted only when the cart has none yet. Never regenerate on re-quote, reload or retry.
+  const txn = /^RC-[A-Z0-9-]{6,}$/.test(transaction_id || "")
+    ? transaction_id
+    : `RC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
 
   // Request shape: partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer
   // (the schema Cover Genius pointed to). `schema` names server-side config on the partner; if omitted the
@@ -51,11 +56,11 @@ app.post("/api/offers", async (req, res) => {
       },
     },
     // RealCheap's own order reference — the natural key a retry must reuse so a re-sent request can't double-issue.
-    partner: { transaction_id: `RC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase() },
+    partner: { transaction_id: txn },
   };
 
   const envelope = await xcover.call("POST", "offers/", offerRequest, "offer-response.json");
-  res.status(envelope.ok ? 200 : 502).json(envelope);
+  res.status(envelope.ok ? 200 : 502).json({ ...envelope, transaction_id: txn });
 });
 
 // POST /api/webhooks - XCover webhook endpoint

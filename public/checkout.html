@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MakeupShop - Checkout</title>
+    <title>Checkout — RealCheap</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>MakeupShop</h1>
-            <p class="tagline">Complete Your Purchase</p>
+            <h1><a href="/" class="brand-link">RealCheap</a></h1>
+            <p class="tagline">Complete your purchase</p>
         </header>
 
         <main class="checkout-page">
@@ -18,27 +18,54 @@
                 <div class="order-summary">
                     <h2>Order Summary</h2>
                     <div class="summary-item">
-                        <span class="item-name">Luxury Matte Foundation</span>
-                        <span class="item-price">€49.99</span>
+                        <span class="item-name" id="itemName">…</span>
+                        <span class="item-price" id="itemPrice"></span>
+                    </div>
+                    <div class="summary-controls">
+                        <label>Qty
+                            <select id="qty">
+                                <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                            </select>
+                        </label>
+                        <label>Ship to
+                            <select id="country">
+                                <option value="US">United States (USD)</option>
+                                <option value="CA">Canada (CAD)</option>
+                                <option value="GB">United Kingdom (GBP)</option>
+                                <option value="IT">Italy (EUR)</option>
+                                <option value="FR">France (EUR)</option>
+                                <option value="ES">Spain (EUR)</option>
+                                <option value="DE">Germany (EUR)</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="summary-item" id="protectionLine" hidden>
+                        <span class="item-name" id="protectionName"></span>
+                        <span class="item-price" id="protectionPrice"></span>
                     </div>
                     <div class="summary-total">
                         <span class="total-label">Total:</span>
-                        <span class="total-price">€49.99</span>
+                        <span class="total-price" id="total"></span>
                     </div>
+                    <p class="order-ref">Order ref <code id="txn">—</code></p>
                 </div>
 
                 <div class="payment-container">
-                    <h2>Payment Details</h2>
-                    <div id="dropin-container"></div>
+                    <section class="offer" id="offer">
+                        <p class="loading">Checking protection options…</p>
+                    </section>
+                    <button type="button" id="continueBtn" class="buy-now-btn" disabled>Continue to payment</button>
+                    <p class="muted">Payment and policy confirmation are added in a later step.</p>
                 </div>
             </div>
         </main>
 
         <footer>
-            <p>&copy; 2026 MakeupShop. All rights reserved.</p>
+            <p>&copy; 2026 RealCheap</p>
         </footer>
     </div>
 
+    <script src="/js/products.js"></script>
     <script src="/js/checkout.js"></script>
 </body>
 </html>
