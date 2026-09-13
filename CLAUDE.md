@@ -98,6 +98,18 @@ Quoted list from the brief: *"Real-time SKU and category eligibility, coverage a
 | 5 | Multi-currency / multi-region settlement (US, CA, GB, IT, FR, ES, DE) | **Selector only** | Switching country/currency re-quotes with a new `customer{}` block; settlement itself is narrative, not code |
 | 6 | Webhook-based claim status | **Yes** | A correctly signed inbound event updates the order's status; a badly signed one is rejected with 401 |
 
+## Idempotency — rules that bind every write to XCover
+
+Source: the retail confirm-offer spec (`partner-docs.covergenius.com/offers/vertical-examples/product-retail/confirm-offer`) supports an `x-idempotency-key` header. A duplicate returns **409 Conflict with the cached original result — handle as success**; an in-flight duplicate returns **423 Locked — retry after a short delay**. The docs suggest "a unique identifier (e.g., UUID)". A UUID minted per attempt defeats the purpose: a retry from a restarted worker gets a new UUID and issues a second policy. So:
+
+1. **One order reference per cart, created once, reused forever.** `partner.transaction_id` (`RC-…`) is generated the first time a cart quotes and is returned to the browser, which keeps it in `sessionStorage` and sends it back on every later call (re-quote, confirm, cancel). A reload or retry must never mint a new one. *(P3 got this wrong — it minted one per `/api/offers` call. Fix in P4.)*
+2. **The idempotency key is derived, never random.** `x-idempotency-key` = UUID v5 of the natural key: `confirm:${transaction_id}:${offer_id}:${sorted quote ids}`; for cancel, `cancel:${transaction_id}:${booking_id}`. Same operation → same key, across retries, reloads, and processes. It is still a valid UUID, which is what the API asks for.
+3. **Track it server-side, keyed by the natural key.** `lib/orders.js` holds a `Map` keyed by `transaction_id` → `{ idempotency_key, offer_id, quote_ids, booking_id, status, history[] }`. Before calling confirm, look the order up: if it already has a `booking_id`, return it without calling XCover at all. The Map stands in for a unique constraint — say so in the demo ("in production this is a unique index on the orders table, not a cache").
+4. **Handle XCover's replies as documented.** 409 → read the cached result from the body, treat as success, store the booking. 423 → wait, retry with backoff (3 attempts). Never surface either to the customer as a failure.
+5. **Cancel follows the same rules.** A refund event on an order with no `booking_id` is a no-op; on an order already `cancelled` it is a no-op; otherwise it cancels once with a derived key. This is how "no duplicate compensation when RealCheap also refunds" is actually enforced, not just described.
+
+The payload panel shows the derived key on every confirm/cancel request so the panel can see it is stable across a retry.
+
 ## Non-goals (decided — see TODO.md)
 
 - No database. The catalog is a module; "in production this is RealCheap's catalog service."
@@ -109,5 +121,5 @@ Quoted list from the brief: *"Real-time SKU and category eligibility, coverage a
 
 - Secrets never reach the browser. `XCOVER_API_KEY` / `XCOVER_API_SECRET` are read only in server code.
 - The payload panel redacts `Authorization` and `X-Api-Key`, and always shows whether a response is `fixture` or `live`. Never let a cached or fixture response pass as live.
-- The confirm call fires only after payment succeeds — never before.
+- The confirm call fires only after payment succeeds — never before — and carries a derived `x-idempotency-key` (see Idempotency above).
 - Checkout completes even if XCover is unreachable (fail-open): the customer can buy the laptop without protection; they are never blocked by the insurance call.

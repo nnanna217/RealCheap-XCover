@@ -86,3 +86,9 @@ Cover Genius replied: the schema is at `partner-docs.covergenius.com/offers/vert
 **Verified:** fixture parses; `/api/offers` builds the retail-shaped request (`schema`, `customer`, `context.purchase_date`, `context.product{…quantity:2, retail_value:549}`, `partner.transaction_id`) and returns the rebuilt fixture (`products[0].name`, three `benefits`, `content.positive_cta`).
 
 **Manual:** the check was worth asking for — an agent-built fixture against the wrong spec would have surfaced as a broken demo the moment staging opened. Open item: get the schema identifier from the CSE.
+
+## 2026-09-13 — Finding: idempotency was only on cancel, and P3 had the United Capital bug (manual)
+
+Candidate flagged that the scope table put idempotency on the refund/cancel step only, while duplicate *issuance* happens at confirm. Checked the retail confirm-offer spec: `x-idempotency-key` is supported, 409 = cached result (treat as success), 423 = in progress (retry). Then noticed the agent's P3 `/api/offers` mints a fresh `partner.transaction_id` on every call — a reload creates a new order reference, which is precisely the client-generated-key-per-attempt failure that produced the $60K United Capital invoice. Rules written into `CLAUDE.md` → Idempotency (one order ref per cart, key derived by UUID v5 from the natural key, server-side ledger keyed by `transaction_id`, 409/423 handling, cancel under the same rules). P4 fixes the `transaction_id` lifecycle; the ledger lands with confirm.
+
+**Manual:** entirely the candidate's catch. The agent built the endpoint correctly against the spec and still reproduced the exact production bug the design is meant to prevent — the spec says "e.g., UUID", and a UUID is what it reached for.
