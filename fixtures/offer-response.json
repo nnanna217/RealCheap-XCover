@@ -1,7 +1,6 @@
 {
-  "_fixture": "Hand-written from the Offers API OpenAPI response schema (partner-docs.covergenius.com) on 2026-09-13 while staging was unreachable. Field NAMES and STRUCTURE match the spec; VALUES (ids, prices, dates, copy) are illustrative placeholders, not Cover Genius pricing. Replace with a live capture as soon as the sandbox responds.",
+  "_fixture": "Hand-written 2026-09-13 from the RETAIL Offers API response schema at partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer (the schema Cover Genius pointed to). Field names/structure match that spec; VALUES (ids, prices, dates, copy) are illustrative placeholders, not Cover Genius pricing. Replace with a live capture when staging responds.",
   "id": "0f6c1e2a-7b3d-4c8e-9a1f-2d5e6b7c8d90",
-  "session_id": "a3b4c5d6-e7f8-4a9b-8c1d-2e3f4a5b6c7d",
   "offer_config_id": "6d7e8f90-1a2b-4c3d-8e4f-5a6b7c8d9e0f",
   "offer_schema": "product_retail",
   "currency": "USD",
@@ -9,6 +8,7 @@
     {
       "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
       "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Protection Plan — 2 years accidental damage & extended warranty",
       "type": "xcover-product",
       "schema_url": "https://api.xcover-staging.com/xcover/partners/E3CCM/schemas/product_retail/",
       "details": {
@@ -19,34 +19,41 @@
           "price": {
             "total_amount": 49.99,
             "total_amount_without_tax": 46.29,
+            "total_amount_min": 49.99,
+            "total_amount_max": 49.99,
             "total_amount_formatted": "$49.99",
-            "total_amount_without_tax_formatted": "$46.29"
+            "total_amount_without_tax_formatted": "$46.29",
+            "total_amount_min_formatted": "$49.99",
+            "total_amount_max_formatted": "$49.99"
           },
-          "tax": {
-            "total_amount": 3.70,
-            "total_amount_formatted": "$3.70",
-            "breakdown": [
-              { "tax_code": "US_SALES_TAX", "tax_amount": 3.70, "tax_amount_formatted": "$3.70" }
-            ]
-          },
+          "tax": { "total_amount": 3.70, "total_amount_formatted": "$3.70" },
           "surcharge": { "total_amount": 0, "total_amount_formatted": "$0.00" },
           "commission": { "total_amount": 12.50, "total_amount_formatted": "$12.50" }
         },
         "pds_url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
-        "files": [],
-        "extra_fields": {},
-        "experiment": {}
+        "files": [
+          { "name": "Policy Disclosure Statement", "url": "https://www.xcover.com/en/pds/placeholder-retail-protection", "type": "pds" }
+        ],
+        "extra_fields": {
+          "pricing_matrix": [],
+          "appliance": "laptop",
+          "retail_ex_tax": 46.29,
+          "retail_inc_tax": 49.99,
+          "retail_ex_tax_rounded": 46.29,
+          "retail_inc_tax_rounded": 49.99,
+          "taxes": { "US_SALES_TAX": 3.70 },
+          "tax_rate": 0.08,
+          "benefit_type": "accidental damage and extended warranty",
+          "partner_commission": 12.50,
+          "variant": "2y"
+        },
+        "experiment": {},
+        "benefits": [
+          { "title": "Accidental damage", "description": "Drops, spills and cracked screens" },
+          { "title": "Extended warranty", "description": "Mechanical and electrical failure after the manufacturer warranty ends" },
+          { "title": "Repair or replace", "description": "Repaired or replaced at no extra cost; claims paid via XClaim" }
+        ]
       }
-    }
-  ],
-  "product_rules": [
-    {
-      "slug": "protection-plan",
-      "product_ids": ["9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b"],
-      "initial_state": "unselected",
-      "min_select": 0,
-      "max_select": 1,
-      "events": []
     }
   ],
   "content": {
@@ -54,8 +61,9 @@
     "locale": "en-US",
     "slug": "retail-protection-offer",
     "title": "Protect your purchase",
+    "extras": {},
     "heading": "Protection Plan",
-    "sub_heading": "Accidental damage and structural failure cover for 24 months",
+    "sub_heading": "2 years of accidental damage and extended warranty cover",
     "disclaimer": "Cover is provided by XCover and subject to the Policy Disclosure Statement.",
     "disclaimer_html": "<p>Cover is provided by XCover and subject to the <a href=\"#\">Policy Disclosure Statement</a>.</p>",
     "price_unit": "per item",
@@ -64,26 +72,7 @@
     "negative_cta": "No thanks, I'll take the risk",
     "negative_cta_warning": "Without protection, repair costs after the manufacturer warranty are yours.",
     "required_message": "",
-    "credibility_message": "Trusted by 1,000+ shoppers this month",
-    "credibility": "high",
-    "credibility_sales_count": 1000,
-    "products": [
-      {
-        "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
-        "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-        "slug": "accidental-damage-24m",
-        "locale": "en-US",
-        "title": "24-month Accidental Damage + Breakdown",
-        "description": "Drops, spills, cracked screens and mechanical or electrical failure.",
-        "benefits": { "repair_or_replace": "Repair or replacement at no extra cost", "claims": "Claims paid fast via XClaim" },
-        "inclusions": { "accidental_damage": "Drops, spills, cracked screens", "breakdown": "Mechanical and electrical failure after manufacturer warranty" },
-        "exclusions": { "theft": "Loss or theft", "cosmetic": "Cosmetic damage that does not affect function", "intentional": "Intentional damage" },
-        "disclaimer": "Excess may apply. See PDS.",
-        "disclaimer_html": "<p>Excess may apply. See PDS.</p>",
-        "credibility_badge": "popular"
-      }
-    ]
+    "credibility_message": "Trusted by 1,000+ shoppers this month"
   },
-  "errors": {},
-  "metadata": {}
+  "errors": {}
 }

@@ -31,13 +31,22 @@ app.post("/api/offers", async (req, res) => {
   if (!product) return res.status(400).json({ error: "unknown or missing sku", sku });
   const quantity = Math.max(1, parseInt(qty, 10) || 1);
 
+  // Request shape: partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer
+  // (the schema Cover Genius pointed to). `schema` is REQUIRED; the identifier itself comes from the CSE.
   const offerRequest = {
+    schema: process.env.XCOVER_SCHEMA || "TODO-from-CSE",
     customer: { language, currency, country },
-    // PROVISIONAL: the real field names are set by the E3CCM offer schema (requested from the CSE).
-    // Shape chosen to carry what any retail rating needs: what it is, what it cost, how many.
     context: {
-      items: [{ sku: product.sku, name: product.name, category: product.category, unit_price: product.price, quantity }],
-      order_total: Number((product.price * quantity).toFixed(2)),
+      purchase_date: new Date().toISOString(),
+      product: {
+        sku: product.sku,
+        title: product.name,
+        category: product.category,
+        quantity,
+        condition: "new",
+        description: product.description,
+        retail_value: product.price,
+      },
     },
     // RealCheap's own order reference — the natural key a retry must reuse so a re-sent request can't double-issue.
     partner: { transaction_id: `RC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase() },
