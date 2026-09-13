@@ -113,3 +113,14 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified in a browser:** offer renders from the fixture with the API-supplied CTAs; accept adds the protection line and enables Continue (`$549 + $49.99 = $598.99`); qty 1→3 re-fetches and resets the decision; country US→DE re-fetches with `customer{de,EUR,DE}`; qty 2 → `$49.99 × 2 = $99.98`; three `POST /api/offers` observed for load/qty/country; **order ref identical across all re-quotes and a full page reload** (`sessionStorage`); server rejects a malformed `transaction_id` and mints a fresh one.
 
 **Manual:** *(candidate to fill after reviewing the diff.)*
+
+## P4b — 2026-09-13 — Checkout explainability (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P4b.
+
+**Changed:** grid is now `3fr 1fr` (summary / offer), collapsing to one column under 768px. The summary's two `span` lines became a proper line-items table — Item (with SKU / "Premium · XCover" sub-label), Qty, Unit price, Line total — with the premium row tinted and a grand-total footer. A declined offer shows as its own row ("Protection Plan — Declined — $0.00") so the shopper sees the decision, not just its absence. The offer column got a "Recommended" pill (survives re-render), smaller type, stacked full-width buttons.
+**Decision:** the badge text is hard-coded; the offer copy itself still comes from the response. If XCover ever supplies a badge (`content.extras` exists in the retail schema for this kind of thing), it should replace the literal.
+
+**Verified in a browser:** qty 2 accepted → rows `2 × $549.00 = $1,098.00` and `2 × $49.99 = $99.98`, total `$1,197.98`; declined → declined row, total `$1,098.00`, the API's `negative_cta_warning` shown; badge visible at the top of the offer column; layout holds at 1024px.
+
+**Manual:** *(candidate to fill.)*

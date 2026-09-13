@@ -17,10 +17,6 @@
             <div class="checkout-container">
                 <div class="order-summary">
                     <h2>Order Summary</h2>
-                    <div class="summary-item">
-                        <span class="item-name" id="itemName">…</span>
-                        <span class="item-price" id="itemPrice"></span>
-                    </div>
                     <div class="summary-controls">
                         <label>Qty
                             <select id="qty">
@@ -39,19 +35,21 @@
                             </select>
                         </label>
                     </div>
-                    <div class="summary-item" id="protectionLine" hidden>
-                        <span class="item-name" id="protectionName"></span>
-                        <span class="item-price" id="protectionPrice"></span>
-                    </div>
-                    <div class="summary-total">
-                        <span class="total-label">Total:</span>
-                        <span class="total-price" id="total"></span>
-                    </div>
+                    <table class="line-items" id="lineItems">
+                        <thead>
+                            <tr><th>Item</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Line total</th></tr>
+                        </thead>
+                        <tbody id="lineItemsBody"></tbody>
+                        <tfoot>
+                            <tr class="grand-total"><td colspan="3">Total</td><td class="num" id="total"></td></tr>
+                        </tfoot>
+                    </table>
                     <p class="order-ref">Order ref <code id="txn">—</code></p>
                 </div>
 
                 <div class="payment-container">
                     <section class="offer" id="offer">
+                        <span class="badge">Recommended</span>
                         <p class="loading">Checking protection options…</p>
                     </section>
                     <button type="button" id="continueBtn" class="buy-now-btn" disabled>Continue to payment</button>

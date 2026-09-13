@@ -19,3 +19,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P4 — 2026-09-13 — Checkout page
 
 > Proceed with P4. *(From the plan: on checkout, show quantity and a country/currency selector (US, CA, GB, IT, FR, ES, DE), call `/api/offers`, render the offer's content, price and PDS link; buttons use `content.positive_cta` / `negative_cta`. Verify: changing quantity or country re-fetches. Plus CLAUDE.md → Idempotency rule 1: one `transaction_id` per cart, reused across re-quotes and reloads.)*
+
+## P4b — 2026-09-13 — Checkout explainability
+
+> I want to edit the Checkout page to ensure more explainability. Make the Order summary larger — let it take 3/4 of the page, and the protection plan 1/4. Adjust the text font and buttons to suit this. Include a badge "Recommended" in the protection plan section. Create a table with the different line items (product and premiums, qty and price) to give the user a one-look view of how the prices stack up.
