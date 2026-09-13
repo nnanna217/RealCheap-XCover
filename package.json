@@ -1,0 +1,26 @@
+{
+  "name": "realcheap-xcover-prototype",
+  "version": "1.0.0",
+  "description": "RealCheap mock checkout with an embedded XCover protection-plan offer (Cover Genius CSE case study)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "express",
+    "xcover",
+    "cover-genius",
+    "prototype"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@adyen/api-library": "^29.0.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

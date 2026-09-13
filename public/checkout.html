@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MakeupShop - Checkout</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Adyen Web Drop-in CSS -->
+    <link rel="stylesheet" href="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/5.71.0/adyen.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MakeupShop</h1>
+            <p class="tagline">Complete Your Purchase</p>
+        </header>
+
+        <main class="checkout-page">
+            <div class="checkout-container">
+                <div class="order-summary">
+                    <h2>Order Summary</h2>
+                    <div class="summary-item">
+                        <span class="item-name">Luxury Matte Foundation</span>
+                        <span class="item-price">€49.99</span>
+                    </div>
+                    <div class="summary-total">
+                        <span class="total-label">Total:</span>
+                        <span class="total-price">€49.99</span>
+                    </div>
+                </div>
+
+                <div class="payment-container">
+                    <h2>Payment Details</h2>
+                    <!-- Adyen Drop-in will be mounted here -->
+                    <div id="dropin-container"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 MakeupShop. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Adyen Web Drop-in SDK -->
+    <script src="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/5.71.0/adyen.js"></script>
+    <script src="/js/checkout.js"></script>
+</body>
+</html>
