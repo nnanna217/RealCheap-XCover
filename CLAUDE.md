@@ -74,3 +74,40 @@ Guidelines above: Karpathy-inspired, packaged by [multica-ai/andrej-karpathy-ski
 - **Starting point:** scaffolded from a prior Adyen payments checkout demo (Express + plain HTML/JS). The swap from Adyen to XCover is done surgically — see `BUILD_LOG.md`.
 - **Secrets:** `XCOVER_API_KEY` / `XCOVER_API_SECRET` live in `.env` (gitignored), read only in `server.js`. The browser never sees them; the on-page payload panel redacts auth headers.
 - **Log every session** in `BUILD_LOG.md`: the prompt, what was produced, what was wrong, what was fixed by hand.
+
+## Goals — quoted from the case-study brief
+
+The application **should**:
+
+- Retrieve and visualize coverage for a sample electronic product (e.g. laptop) within a mock RealCheap checkout page, including insurance product details and coverage.
+- Enable interactive elements for users to opt-in or decline protection during the mock transaction.
+- Expose the underlying API request and response data on the frontend to allow stakeholders to validate the live integration.
+
+*"Functional integrity is prioritized over aesthetic design; a transparent, working integration using realistic data is the objective."*
+
+## Scope — the brief's six technical considerations, as verifiable goals
+
+Quoted list from the brief: *"Real-time SKU and category eligibility, coverage and pricing calculation at checkout, quantity-based rating for multi-unit orders, cancellation API integration to prevent duplicate compensation when RealCheap also issues refunds, multi-currency/multi-region settlement (US, Canada, UK, Italy, France, Spain, Germany), and webhook-based claim status."*
+
+| # | Consideration | Build | Verify |
+|---|---|---|---|
+| 1 | Real-time SKU and category eligibility | **Yes** | The sleeve SKU (`accessories/bags`) produces no offer and checkout handles it gracefully; laptops produce one |
+| 2 | Coverage and pricing calculation at checkout | **Yes** | Offer price and coverage are rendered from the XCover response — never computed or hard-coded locally |
+| 3 | Quantity-based rating for multi-unit orders | **Yes** | Changing quantity changes `context.product.quantity` and triggers a re-quote |
+| 4 | Cancellation API — no duplicate compensation when RealCheap also refunds | **Yes** | A refund on an order calls `bookings/{id}/cancel`; the call is idempotent on the order reference (a repeat cannot cancel or refund twice) |
+| 5 | Multi-currency / multi-region settlement (US, CA, GB, IT, FR, ES, DE) | **Selector only** | Switching country/currency re-quotes with a new `customer{}` block; settlement itself is narrative, not code |
+| 6 | Webhook-based claim status | **Yes** | A correctly signed inbound event updates the order's status; a badly signed one is rejected with 401 |
+
+## Non-goals (decided — see TODO.md)
+
+- No database. The catalog is a module; "in production this is RealCheap's catalog service."
+- No real PSP. Payment is a simulated step; RealCheap is merchant of record under XCover's Single Payment model.
+- No framework, no build step. Express + plain HTML/JS.
+- Aesthetics are secondary to a working, transparent integration.
+
+## Invariants — must hold in every commit
+
+- Secrets never reach the browser. `XCOVER_API_KEY` / `XCOVER_API_SECRET` are read only in server code.
+- The payload panel redacts `Authorization` and `X-Api-Key`, and always shows whether a response is `fixture` or `live`. Never let a cached or fixture response pass as live.
+- The confirm call fires only after payment succeeds — never before.
+- Checkout completes even if XCover is unreachable (fail-open): the customer can buy the laptop without protection; they are never blocked by the insurance call.
