@@ -3,70 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MakeupShop - Premium Foundation</title>
+    <title>RealCheap</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>MakeupShop</h1>
-            <p class="tagline">Premium Beauty Products</p>
+            <h1><a href="/" class="brand-link">RealCheap</a></h1>
+            <p class="tagline">Factory-direct deals. No brand tax.</p>
         </header>
 
         <main class="product-page">
-            <div class="product-container">
-                <div class="product-image-carousel">
-                    <!-- Main carousel image -->
-                    <div class="carousel-main">
-                        <button type="button" class="carousel-btn prev" id="prevBtn">‹</button>
-                        <img id="mainImage" src="/images/foundation/flawless-finish-foundation.png" alt="Luxury Matte Foundation">
-                        <button type="button" class="carousel-btn next" id="nextBtn">›</button>
-                    </div>
-
-                    <!-- Thumbnail images -->
-                    <div class="carousel-thumbnails">
-                        <img class="thumbnail active" src="/images/foundation/flawless-finish-foundation.png" alt="Foundation main" data-index="0">
-                        <img class="thumbnail" src="/images/foundation/flawless-finish-foundation-variation-1.png" alt="Foundation variation 1" data-index="1">
-                        <img class="thumbnail" src="/images/foundation/flawless-finish-foundation-variation-2.png" alt="Foundation variation 2" data-index="2">
-                        <img class="thumbnail" src="/images/foundation/flawless-finish-foundation-variation-3.png" alt="Foundation variation 3" data-index="3">
-                        <img class="thumbnail" src="/images/foundation/flawless-finish-foundation-close-up-angle.png" alt="Foundation close-up" data-index="4">
-                        <img class="thumbnail" src="/images/foundation/flawless-finish-foundation-overhead-flatlay.png" alt="Foundation overhead" data-index="5">
-                    </div>
-                </div>
-
-                <div class="product-details">
-                    <h2>Luxury Matte Foundation</h2>
-                    <p class="product-description">
-                        Experience flawless, long-lasting coverage with our signature foundation.
-                        This lightweight formula blends seamlessly into your skin, providing a natural matte finish
-                        that lasts all day. Perfect for all skin types.
-                    </p>
-
-                    <div class="product-features">
-                        <h3>Key Features:</h3>
-                        <ul>
-                            <li>24-hour wear</li>
-                            <li>Buildable coverage</li>
-                            <li>SPF 30 protection</li>
-                            <li>Oil-free formula</li>
-                            <li>Cruelty-free & vegan</li>
-                        </ul>
-                    </div>
-
-                    <div class="product-price">
-                        <span class="price">€49.99</span>
-                    </div>
-
-                    <button type="button" id="buyNowBtn" class="buy-now-btn">Buy Now</button>
-                </div>
+            <div class="product-container" id="product">
+                <p class="loading">Loading product…</p>
             </div>
         </main>
 
         <footer>
-            <p>&copy; 2026 MakeupShop. All rights reserved.</p>
+            <p>&copy; 2026 RealCheap</p>
         </footer>
     </div>
 
+    <script src="/js/products.js"></script>
     <script src="/js/product.js"></script>
 </body>
 </html>

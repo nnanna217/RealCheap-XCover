@@ -1,80 +1,31 @@
-// Product page logic
+// Product page: render the product named by ?sku= and hand off to checkout.
 
-document.addEventListener('DOMContentLoaded', () => {
-    // ======================================
-    // Image Carousel Functionality
-    // ======================================
-    const mainImage = document.getElementById('mainImage');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const thumbnails = document.querySelectorAll('.thumbnail');
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById("product");
+  const sku = new URLSearchParams(window.location.search).get("sku");
+  const product = findProduct(sku);
 
-    // Array of image sources
-    const images = [
-        '/images/foundation/flawless-finish-foundation.png',
-        '/images/foundation/flawless-finish-foundation-variation-1.png',
-        '/images/foundation/flawless-finish-foundation-variation-2.png',
-        '/images/foundation/flawless-finish-foundation-variation-3.png',
-        '/images/foundation/flawless-finish-foundation-close-up-angle.png',
-        '/images/foundation/flawless-finish-foundation-overhead-flatlay.png'
-    ];
+  if (!product) {
+    container.innerHTML = `<p class="error-message">Unknown product "${sku || ""}". <a href="/">Back to catalog</a></p>`;
+    return;
+  }
 
-    let currentIndex = 0;
+  document.title = `${product.name} — RealCheap`;
+  container.innerHTML = `
+    <div class="product-image-carousel">
+      <div class="carousel-main">
+        <img id="mainImage" src="${product.image}" alt="${product.name}">
+      </div>
+    </div>
+    <div class="product-details">
+      <h2>${product.name}</h2>
+      <p class="catalog-category">${product.category} · SKU ${product.sku}</p>
+      <p class="product-description">${product.description}</p>
+      <div class="product-price"><span class="price">$${product.price.toFixed(2)}</span></div>
+      <button type="button" id="buyNowBtn" class="buy-now-btn">Buy Now</button>
+    </div>`;
 
-    // Function to update main image and active thumbnail
-    function updateImage(index) {
-        // Update current index
-        currentIndex = index;
-
-        // Update main image
-        mainImage.src = images[currentIndex];
-
-        // Update active thumbnail
-        thumbnails.forEach((thumb, i) => {
-            if (i === currentIndex) {
-                thumb.classList.add('active');
-            } else {
-                thumb.classList.remove('active');
-            }
-        });
-    }
-
-    // Previous button click
-    prevBtn.addEventListener('click', () => {
-        const newIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
-        updateImage(newIndex);
-    });
-
-    // Next button click
-    nextBtn.addEventListener('click', () => {
-        const newIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
-        updateImage(newIndex);
-    });
-
-    // Thumbnail clicks
-    thumbnails.forEach((thumbnail) => {
-        thumbnail.addEventListener('click', () => {
-            const index = parseInt(thumbnail.getAttribute('data-index'));
-            updateImage(index);
-        });
-    });
-
-    // Optional: Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') {
-            prevBtn.click();
-        } else if (e.key === 'ArrowRight') {
-            nextBtn.click();
-        }
-    });
-
-    // ======================================
-    // Buy Now Button
-    // ======================================
-    const buyNowBtn = document.getElementById('buyNowBtn');
-
-    buyNowBtn.addEventListener('click', () => {
-        // Navigate to checkout page
-        window.location.href = '/checkout.html';
-    });
+  document.getElementById("buyNowBtn").addEventListener("click", () => {
+    window.location.href = `/checkout.html?sku=${encodeURIComponent(product.sku)}&qty=1`;
+  });
 });

@@ -446,3 +446,26 @@ footer {
         padding: 0.5rem 0.8rem;
     }
 }
+
+/* Catalog (index.html) */
+.catalog {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+    padding: 24px 0;
+}
+.catalog-card {
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.15s ease;
+}
+.catalog-card:hover { transform: translateY(-2px); }
+.catalog-card img { width: 100%; border-radius: 8px; }
+.catalog-card h3 { margin: 12px 0 4px; font-size: 1.05rem; }
+.catalog-category { color: #6b7280; font-size: 0.85rem; margin: 0 0 8px; }
+.brand-link { color: inherit; text-decoration: none; }
