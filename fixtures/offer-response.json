@@ -1,0 +1,89 @@
+{
+  "_fixture": "Hand-written from the Offers API OpenAPI response schema (partner-docs.covergenius.com) on 2026-09-13 while staging was unreachable. Field NAMES and STRUCTURE match the spec; VALUES (ids, prices, dates, copy) are illustrative placeholders, not Cover Genius pricing. Replace with a live capture as soon as the sandbox responds.",
+  "id": "0f6c1e2a-7b3d-4c8e-9a1f-2d5e6b7c8d90",
+  "session_id": "a3b4c5d6-e7f8-4a9b-8c1d-2e3f4a5b6c7d",
+  "offer_config_id": "6d7e8f90-1a2b-4c3d-8e4f-5a6b7c8d9e0f",
+  "offer_schema": "product_retail",
+  "currency": "USD",
+  "products": [
+    {
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+      "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "type": "xcover-product",
+      "schema_url": "https://api.xcover-staging.com/xcover/partners/E3CCM/schemas/product_retail/",
+      "details": {
+        "policy_version_id": "pv-retail-protection-2026-01",
+        "start_date": "2026-09-13T00:00:00Z",
+        "end_date": "2028-09-13T00:00:00Z",
+        "finance": {
+          "price": {
+            "total_amount": 49.99,
+            "total_amount_without_tax": 46.29,
+            "total_amount_formatted": "$49.99",
+            "total_amount_without_tax_formatted": "$46.29"
+          },
+          "tax": {
+            "total_amount": 3.70,
+            "total_amount_formatted": "$3.70",
+            "breakdown": [
+              { "tax_code": "US_SALES_TAX", "tax_amount": 3.70, "tax_amount_formatted": "$3.70" }
+            ]
+          },
+          "surcharge": { "total_amount": 0, "total_amount_formatted": "$0.00" },
+          "commission": { "total_amount": 12.50, "total_amount_formatted": "$12.50" }
+        },
+        "pds_url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
+        "files": [],
+        "extra_fields": {},
+        "experiment": {}
+      }
+    }
+  ],
+  "product_rules": [
+    {
+      "slug": "protection-plan",
+      "product_ids": ["9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b"],
+      "initial_state": "unselected",
+      "min_select": 0,
+      "max_select": 1,
+      "events": []
+    }
+  ],
+  "content": {
+    "schema_version": "1",
+    "locale": "en-US",
+    "slug": "retail-protection-offer",
+    "title": "Protect your purchase",
+    "heading": "Protection Plan",
+    "sub_heading": "Accidental damage and structural failure cover for 24 months",
+    "disclaimer": "Cover is provided by XCover and subject to the Policy Disclosure Statement.",
+    "disclaimer_html": "<p>Cover is provided by XCover and subject to the <a href=\"#\">Policy Disclosure Statement</a>.</p>",
+    "price_unit": "per item",
+    "description": "Repairs or replacement if your laptop is accidentally damaged or stops working after the manufacturer warranty ends.",
+    "positive_cta": "Yes, protect my laptop",
+    "negative_cta": "No thanks, I'll take the risk",
+    "negative_cta_warning": "Without protection, repair costs after the manufacturer warranty are yours.",
+    "required_message": "",
+    "credibility_message": "Trusted by 1,000+ shoppers this month",
+    "credibility": "high",
+    "credibility_sales_count": 1000,
+    "products": [
+      {
+        "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+        "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+        "slug": "accidental-damage-24m",
+        "locale": "en-US",
+        "title": "24-month Accidental Damage + Breakdown",
+        "description": "Drops, spills, cracked screens and mechanical or electrical failure.",
+        "benefits": { "repair_or_replace": "Repair or replacement at no extra cost", "claims": "Claims paid fast via XClaim" },
+        "inclusions": { "accidental_damage": "Drops, spills, cracked screens", "breakdown": "Mechanical and electrical failure after manufacturer warranty" },
+        "exclusions": { "theft": "Loss or theft", "cosmetic": "Cosmetic damage that does not affect function", "intentional": "Intentional damage" },
+        "disclaimer": "Excess may apply. See PDS.",
+        "disclaimer_html": "<p>Excess may apply. See PDS.</p>",
+        "credibility_badge": "popular"
+      }
+    ]
+  },
+  "errors": {},
+  "metadata": {}
+}
