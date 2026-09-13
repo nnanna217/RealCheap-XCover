@@ -124,3 +124,20 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified in a browser:** qty 2 accepted → rows `2 × $549.00 = $1,098.00` and `2 × $49.99 = $99.98`, total `$1,197.98`; declined → declined row, total `$1,098.00`, the API's `negative_cta_warning` shown; badge visible at the top of the offer column; layout holds at 1024px.
 
 **Manual:** *(candidate to fill.)*
+
+## P5 — 2026-09-13 — Payload panel (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P5.
+
+**Assumptions surfaced before coding:**
+1. Built it as an **integration log**, not a single panel: the page makes several XCover calls (load, each re-quote, and later opt-out / confirm / cancel), and a stakeholder validating the integration wants to see all of them, newest first, each collapsible (`<details>`, most recent open). One panel showing only the last call would hide the re-quote on quantity change — which is consideration #3's proof.
+2. Redaction stays server-side (P3). The browser never held the secrets, so the panel can't leak what it never had; verified no key/secret substring anywhere in the DOM.
+3. Fixture responses are labelled twice — the mode badge, and "(fixture — not from XCover)" on the response heading — per the invariant that a fixture must never pass as live.
+
+**Found while verifying, fixed before commit:**
+- The two-column request/response grid overflowed the container (long JSON lines forced the columns wider than the page; the response column was cut off). `min-width: 0` on the grid children.
+- **Real bug from P4:** after a *failed* live call the offer column stayed on "Checking protection options…" indefinitely — `render()` skipped `renderOffer()` when there was no offer and the loading text was still present. Replaced the DOM-sniffing with an explicit `state.quoting` flag; `renderOffer()` now always runs. A failed quote resolves to "No protection plan is available" and Continue is enabled — fail-open in effect, though P7 still owes the distinction between "XCover said no" and "XCover was unreachable" and the timeout tuning.
+
+**Verified in a browser:** fixture mode → badge `FIXTURE` (amber), entry `create offer · POST /xcover/partners/E3CCM/offers/ · HTTP 200 · 0 ms · fixture`, request headers show `X-Api-Key: "***"`, `Authorization: "***"`, request body and fixture response side by side, response column inside the panel bounds. Live mode against the still-blocked staging → badge `LIVE` (green), entry shows `error · timeout after 3000ms · 3003 ms`, offer column resolves, Continue enabled.
+
+**Manual:** *(candidate to fill.)*

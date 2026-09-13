@@ -10,8 +10,10 @@ const state = {
   country: "US",
   transactionId: null, // one per cart — see CLAUDE.md → Idempotency rule 1
   offer: null,         // the XCover offer response, or null when none is available
-  envelope: null,      // full request/response envelope for the payload panel (P5)
+  envelope: null,      // most recent request/response envelope
+  calls: [],           // every envelope this page produced, for the integration log
   protection: "undecided", // undecided | accepted | declined
+  quoting: false,      // true while a create-offer call is in flight
 };
 
 const $ = (id) => document.getElementById(id);
@@ -23,7 +25,7 @@ function money(amount, currency) {
 function txnKey() { return `rc.txn.${state.product.sku}`; }
 
 async function quote() {
-  $("offer").innerHTML = '<p class="loading">Checking protection options…</p>';
+  state.quoting = true;
   state.offer = null;
   state.protection = "undecided";
   render();
@@ -42,6 +44,7 @@ async function quote() {
   });
   const envelope = await res.json();
   state.envelope = envelope;
+  logCall("create offer", envelope);
 
   // The server mints the order reference once; keep it for this cart across re-quotes and reloads.
   if (envelope.transaction_id && envelope.transaction_id !== state.transactionId) {
@@ -51,11 +54,59 @@ async function quote() {
 
   const products = envelope.ok && envelope.response && Array.isArray(envelope.response.products) ? envelope.response.products : [];
   state.offer = products.length ? envelope.response : null;
+  state.quoting = false;
   render();
+}
+
+// ---- Integration log (payload panel) ----
+// The server already redacts Authorization / X-Api-Key in the envelope; the browser never had the secrets.
+function logCall(label, envelope) {
+  state.calls.unshift({ label, at: new Date(), envelope });
+  renderPanel();
+}
+
+function pretty(obj) {
+  return JSON.stringify(obj, null, 2).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+function renderPanel() {
+  const badge = $("modeBadge");
+  const mode = state.calls.length ? state.calls[0].envelope.mode : null;
+  badge.textContent = mode ? mode.toUpperCase() : "—";
+  badge.className = `mode-badge ${mode || ""}`;
+
+  $("payloadEntries").innerHTML = state.calls.map((c, i) => {
+    const e = c.envelope;
+    const status = e.error ? `error · ${e.error}` : `HTTP ${e.status}`;
+    return `
+    <details class="call" ${i === 0 ? "open" : ""}>
+      <summary>
+        <span class="call-label">${c.label}</span>
+        <code>${e.request.method} ${e.request.url.replace(/^https?:\/\/[^/]+/, "")}</code>
+        <span class="call-status ${e.ok ? "ok" : "fail"}">${status}</span>
+        <span class="muted small">${e.elapsed_ms} ms · ${e.mode} · ${c.at.toLocaleTimeString()}</span>
+      </summary>
+      <div class="call-body">
+        <div>
+          <h4>Request</h4>
+          <pre>${pretty({ url: e.request.url, headers: e.request.headers })}</pre>
+          <pre>${pretty(e.request.body)}</pre>
+        </div>
+        <div>
+          <h4>Response ${e.mode === "fixture" ? '<span class="small muted">(fixture — not from XCover)</span>' : ""}</h4>
+          <pre>${pretty(e.error ? { error: e.error } : e.response)}</pre>
+        </div>
+      </div>
+    </details>`;
+  }).join("");
 }
 
 function renderOffer() {
   const el = $("offer");
+  if (state.quoting) {
+    el.innerHTML = '<span class="badge">Recommended</span><p class="loading">Checking protection options…</p>';
+    return;
+  }
   if (!state.offer) {
     el.innerHTML = '<p class="muted">No protection plan is available for this item.</p>';
     return;
@@ -125,7 +176,7 @@ function render() {
   // Shopper can continue once they've decided — or immediately if there was nothing to decide.
   $("continueBtn").disabled = !!state.offer && state.protection === "undecided";
 
-  if (state.offer || $("offer").querySelector(".loading") === null) renderOffer();
+  renderOffer();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

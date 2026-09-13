@@ -511,3 +511,26 @@ footer {
 .badge { display: inline-block; background: #e91e63; color: #fff; font-size: 0.7rem; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
 .payment-container .buy-now-btn#continueBtn { font-size: 0.9rem; padding: 10px 12px; }
 @media (max-width: 768px) { .checkout-container { grid-template-columns: 1fr; } }
+
+/* Integration log / payload panel (P5) */
+.payload-panel { margin-top: 2rem; background: #1e1e24; color: #e6e6e6; border-radius: 12px; padding: 20px 24px; }
+.payload-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.payload-header h2 { font-size: 1.1rem; margin: 0; color: #fff; }
+.mode-badge { font-size: 0.75rem; font-weight: bold; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 999px; background: #555; color: #fff; }
+.mode-badge.fixture { background: #b45309; }
+.mode-badge.live { background: #15803d; }
+.call { border-top: 1px solid #333; padding: 8px 0; }
+.call summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; list-style: none; }
+.call summary::-webkit-details-marker { display: none; }
+.call summary::before { content: "▸"; color: #888; }
+.call[open] summary::before { content: "▾"; }
+.call-label { font-weight: bold; color: #fff; }
+.call summary code { color: #9cdcfe; font-size: 0.85rem; }
+.call-status { font-size: 0.8rem; padding: 2px 8px; border-radius: 6px; }
+.call-status.ok { background: #14532d; color: #bbf7d0; }
+.call-status.fail { background: #7f1d1d; color: #fecaca; }
+.call-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+.call-body h4 { margin: 0 0 6px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #aaa; }
+.call-body pre { background: #111116; border-radius: 8px; padding: 12px; font-size: 0.75rem; line-height: 1.4; overflow-x: auto; max-height: 420px; margin: 0 0 10px; color: #d4d4d4; }
+@media (max-width: 768px) { .call-body { grid-template-columns: 1fr; } }
+.call-body > div { min-width: 0; }

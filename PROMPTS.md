@@ -23,3 +23,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P4b — 2026-09-13 — Checkout explainability
 
 > I want to edit the Checkout page to ensure more explainability. Make the Order summary larger — let it take 3/4 of the page, and the protection plan 1/4. Adjust the text font and buttons to suit this. Include a badge "Recommended" in the protection plan section. Create a table with the different line items (product and premiums, qty and price) to give the user a one-look view of how the prices stack up.
+
+## P5 — 2026-09-13 — Payload panel
+
+> Proceed with P5 — Payload panel. *(From the plan: below the checkout, a collapsible panel showing the exact request sent and response received as pretty JSON, with `Authorization` / `X-Api-Key` redacted to `***`, and a badge reading `fixture` or `live`. Verify: the badge matches `XCOVER_MODE`.)*
