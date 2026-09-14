@@ -43,3 +43,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P6 — 2026-09-13 — Eligibility (consideration #1)
 
 > It seems #1 SKU / category eligibility has not been done correctly or built. Reverify the sleeve SKU → no offer. It seems this was not handled gracefully, as this product item still generates a quote.
+
+## P7 — 2026-09-13 — Confirm + ledger (idempotency rules 2–4)
+
+> Confirm if the idempotency and transaction id UUID v5 generation rule was implemented. → Only rule 1 was. → Yes, proceed with confirm + ledger.

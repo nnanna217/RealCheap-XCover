@@ -175,3 +175,21 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified in a browser:** sleeve → integration log `HTTP 422`, offer column "Not available for this item", table row "Protection Plan — Not available for this item — $0.00", total $4.00, Continue enabled. Laptop → offer as before. Live mode against blocked staging → "temporarily unavailable" wording, row "Temporarily unavailable", Continue enabled, log `error · timeout`.
 
 **Manual:** *(candidate to fill — the catch itself was the manual intervention.)*
+
+## P7 — 2026-09-13 — Confirm + ledger, idempotency rules 2–4 (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P7. Candidate asked for a status check first; answer was that only rule 1 (transaction_id lifecycle) existed — rules 2–5 all attach to confirm/cancel, which didn't exist yet.
+
+**Built:**
+- `lib/idempotency.js` — UUID v5 (SHA-1 over a fixed RealCheap namespace + name, version/variant bits set) with `confirmKey(txn, offer_id, quote_ids)` and `cancelKey(txn, booking_id)`. Same inputs → same key; different order → different key; output validates as v5. **Rule 2.**
+- `lib/orders.js` — in-memory `Map` keyed by `transaction_id`, `upsert` with an append-only `history[]` that stores every XCover envelope. Stand-in for a unique index; lost on restart, by design. **Rule 3.**
+- `POST /api/orders/:txn/confirm` — looks the order up **before** calling XCover: an existing `booking_id` is returned with `served_from: "ledger"` and no call is made. Otherwise derives the key, sends it as `x-idempotency-key`, and handles the documented replies: **409 → body is the cached original → treated as success; 423 → exponential backoff (500 ms, 1 s), up to 3 attempts.** Neither reaches the shopper as a failure. **Rule 4.** Guards: offer/quotes must match what the ledger quoted (409 from us), policyholder fields required (400), unknown order (404).
+- `POST /api/orders/:txn/pay` — **simulated** payment; RealCheap is merchant of record under XCover's Single Payment model, so a real PSP is out of scope and said so on the page. The invariant "confirm only after payment succeeds" is the client-side order of operations in `pay()`.
+- Fixtures from the retail Confirm Offer 200 schema (`confirm-response.json`, incl. `coi`, `fnol_link`, `security_token`, `can_be_cancelled`), plus `-409` and `-423` variants with `_status`. A `simulate: "409" | "423"` body field (fixture mode only) selects them so rule 4 can be shown without a real duplicate.
+- Checkout: Continue freezes the cart and reveals policyholder fields + Pay; on success it confirms (if protection was accepted) and redirects. Result page renders the ledger entry — line items, payment, booking id, policy, cover period, policyholder, COI/PDS links, **"Make a claim" via `fnol_link`** (XClaim), the idempotency key, and the order's full integration log from `history[]`. A **"Demo: re-send the same confirm"** button re-posts the identical confirm and prints `served_from: ledger … XCover was not called … still one policy` — rule 3 demonstrable in the room.
+- `public/js/panel.js` — integration-log renderer shared by checkout and result; shows `x-idempotency-key` in the summary line when present (unredacted on purpose — it is not a secret, it is the proof).
+
+**Verified (curl script + browser):** pay → `paid`, 598.99; confirm #1 → `served_from xcover`, key `6596de52-…` sent as the header, booking `8AMKH-KQ8NR-INS`, status `confirmed`; confirm #2 identical → `served_from ledger`, XCover not called; simulated 409 → `replayed true, treated_as_success true`, booking stored; simulated 423 → attempts `[423, 423, 200]`; wrong `offer_id` → 409; unknown order → 404. Browser: accept → Continue → Pay → result page with booking and both log entries; retry button → ledger answer, log count unchanged (no new XCover call). The candidate's own `sessionStorage` order ref from an earlier session survived a server restart because the quote re-registered it — worth knowing: the ledger is per-process, the order ref is per-browser.
+
+**Not done here:** rule 5 (cancel) and the opt-out call on decline — next.
+**Manual:** *(candidate to fill.)*

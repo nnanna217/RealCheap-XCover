@@ -64,47 +64,10 @@ async function quote() {
   render();
 }
 
-// ---- Integration log (payload panel) ----
-// The server already redacts Authorization / X-Api-Key in the envelope; the browser never had the secrets.
+// ---- Integration log (shared renderer in panel.js) ----
 function logCall(label, envelope) {
   state.calls.unshift({ label, at: new Date(), envelope });
-  renderPanel();
-}
-
-function pretty(obj) {
-  return JSON.stringify(obj, null, 2).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-}
-
-function renderPanel() {
-  const badge = $("modeBadge");
-  const mode = state.calls.length ? state.calls[0].envelope.mode : null;
-  badge.textContent = mode ? mode.toUpperCase() : "—";
-  badge.className = `mode-badge ${mode || ""}`;
-
-  $("payloadEntries").innerHTML = state.calls.map((c, i) => {
-    const e = c.envelope;
-    const status = e.error ? `error · ${e.error}` : `HTTP ${e.status}`;
-    return `
-    <details class="call" ${i === 0 ? "open" : ""}>
-      <summary>
-        <span class="call-label">${c.label}</span>
-        <code>${e.request.method} ${e.request.url.replace(/^https?:\/\/[^/]+/, "")}</code>
-        <span class="call-status ${e.ok ? "ok" : "fail"}">${status}</span>
-        <span class="muted small">${e.elapsed_ms} ms · ${e.mode} · ${c.at.toLocaleTimeString()}</span>
-      </summary>
-      <div class="call-body">
-        <div>
-          <h4>Request</h4>
-          <pre>${pretty({ url: e.request.url, headers: e.request.headers })}</pre>
-          <pre>${pretty(e.request.body)}</pre>
-        </div>
-        <div>
-          <h4>Response ${e.mode === "fixture" ? '<span class="small muted">(fixture — not from XCover)</span>' : ""}</h4>
-          <pre>${pretty(e.error ? { error: e.error } : e.response)}</pre>
-        </div>
-      </div>
-    </details>`;
-  }).join("");
+  renderIntegrationLog(state.calls, { badgeEl: $("modeBadge"), listEl: $("payloadEntries") });
 }
 
 function renderOffer() {
@@ -205,5 +168,42 @@ document.addEventListener("DOMContentLoaded", () => {
   $("qty").addEventListener("change", (e) => { state.qty = parseInt(e.target.value, 10); quote(); });
   $("country").addEventListener("change", (e) => { state.country = e.target.value; quote(); });
 
+  // Continue → payment step. The cart is frozen from here; changing it means a new quote.
+  $("continueBtn").addEventListener("click", () => {
+    $("qty").disabled = true; $("country").disabled = true; $("continueBtn").hidden = true;
+    $("phCountry").value = state.country;
+    $("paymentStep").hidden = false;
+    $("payBtn").textContent = `Pay ${$("total").textContent} (simulated)`;
+  });
+
+  $("payBtn").addEventListener("click", pay);
   quote();
 });
+
+// Payment (simulated) → then, and only then, confirm the offer. Order of operations is the invariant.
+async function pay() {
+  const ph = { first_name: $("phFirst").value.trim(), last_name: $("phLast").value.trim(), email: $("phEmail").value.trim(), country: $("phCountry").value };
+  if (state.offer && state.protection === "accepted" && (!ph.first_name || !ph.last_name || !ph.email)) {
+    $("payMsg").textContent = "Policyholder name and email are required for the protection plan.";
+    return;
+  }
+  $("payBtn").disabled = true; $("payMsg").textContent = "Processing payment…";
+
+  const paid = await fetch(`/api/orders/${state.transactionId}/pay`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ protection: state.offer ? state.protection : "none" }),
+  });
+  if (!paid.ok) { $("payMsg").textContent = "Payment failed (simulated)."; $("payBtn").disabled = false; return; }
+
+  if (state.offer && state.protection === "accepted") {
+    $("payMsg").textContent = "Payment received. Confirming your protection plan…";
+    const res = await fetch(`/api/orders/${state.transactionId}/confirm`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offer_id: state.offer.id, quote_ids: [state.offer.products[0].id], policyholder: ph }),
+    });
+    const r = await res.json();
+    if (r.envelope) logCall("confirm offer", r.envelope);
+    // A failed confirm after a successful payment is RealCheap's problem to retry — the shopper is never blocked.
+  }
+  window.location.href = `/result.html?txn=${encodeURIComponent(state.transactionId)}`;
+}

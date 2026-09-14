@@ -3,6 +3,8 @@ const path = require("path");
 require("dotenv").config();
 const { verifyXcoverWebhook } = require("./lib/xcover-auth");
 const xcover = require("./lib/xcover-client");
+const orders = require("./lib/orders");
+const { confirmKey } = require("./lib/idempotency");
 const { findProduct } = require("./public/js/products");
 
 const app = express();
@@ -64,8 +66,104 @@ app.post("/api/offers", async (req, res) => {
   // WHICH recorded answer stands in: an offer for electronics, the documented 422 for anything else.
   const fixture = product.category.startsWith("electronics/") ? "offer-response.json" : "offer-response-ineligible.json";
   const envelope = await xcover.call("POST", "offers/", offerRequest, fixture);
+
+  // Ledger: remember what was quoted for this order, so confirm can be checked against it.
+  const offer = envelope.ok && envelope.response && Array.isArray(envelope.response.products) ? envelope.response : null;
+  orders.upsert(txn, {
+    sku: product.sku, product_name: product.name, unit_price: product.price, quantity, country, currency,
+    offer_id: offer ? offer.id : null,
+    quote_ids: offer ? offer.products.map((p) => p.id) : [],
+    offer_currency: offer ? offer.currency : null,
+    premium_unit: offer ? offer.products[0].details.finance.price.total_amount : null,
+    status: offer ? "quoted" : "no_offer",
+  }, { event: "create offer", status: envelope.status, mode: envelope.mode, envelope });
+
   // Our own status reflects reachability only: XCover answered (any status) → 200 with the envelope; unreachable → 502.
   res.status(envelope.status === 0 ? 502 : 200).json({ ...envelope, transaction_id: txn });
+});
+
+// GET /api/orders/:txn — the ledger entry for one order (result page, orders view)
+app.get("/api/orders/:txn", (req, res) => {
+  const order = orders.get(req.params.txn);
+  if (!order) return res.status(404).json({ error: "unknown order", transaction_id: req.params.txn });
+  res.json(order);
+});
+
+// GET /api/orders — every order this process has seen, newest first
+app.get("/api/orders", (req, res) => res.json(orders.list()));
+
+// POST /api/orders/:txn/confirm — payment has succeeded; confirm the selected quote(s) with XCover.
+// Body: { offer_id, quote_ids, policyholder{first_name,last_name,email,country}, simulate? }
+//   simulate: "409" | "423" — fixture mode only; stands in for XCover's duplicate replies so rule 4 can be shown.
+app.post("/api/orders/:txn/confirm", async (req, res) => {
+  const txn = req.params.txn;
+  const { offer_id, quote_ids = [], policyholder = {}, simulate } = req.body || {};
+  const order = orders.get(txn);
+  if (!order) return res.status(404).json({ error: "unknown order", transaction_id: txn });
+
+  // Rule 3 — the ledger is checked BEFORE XCover is called. A booking that already exists is returned as-is;
+  // XCover is not contacted, so a retried confirm cannot issue a second policy even if the key were wrong.
+  if (order.booking_id) {
+    return res.json({ served_from: "ledger", order, envelope: null,
+      note: `Order ${txn} already has booking ${order.booking_id}; XCover was not called.` });
+  }
+  if (order.offer_id !== offer_id || !quote_ids.length || !quote_ids.every((q) => order.quote_ids.includes(q))) {
+    return res.status(409).json({ error: "offer/quotes do not match what was quoted for this order", order });
+  }
+  for (const f of ["first_name", "last_name", "email", "country"]) {
+    if (!policyholder[f]) return res.status(400).json({ error: `policyholder.${f} is required` });
+  }
+
+  // Rule 2 — the key is derived from the natural key of this operation, never minted per attempt.
+  const key = confirmKey(txn, offer_id, quote_ids);
+  const body = { quotes: quote_ids.map((id) => ({ id })), policyholder };
+  let fixture = simulate === "409" ? "confirm-response-409.json" : simulate === "423" ? "confirm-response-423.json" : "confirm-response.json";
+
+  // Rule 4 — 409 = XCover already processed this key; the body is the cached original result → success.
+  //          423 = still processing → back off and retry (3 attempts). Neither is surfaced as a failure.
+  const attempts = [];
+  let envelope;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key });
+    attempts.push({ attempt, status: envelope.status, elapsed_ms: envelope.elapsed_ms });
+    if (envelope.status !== 423) break;
+    await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
+    if (simulate === "423" && attempt === 2) fixture = "confirm-response.json"; // fixture: the lock clears
+  }
+
+  const booking = envelope.status === 200 || envelope.status === 409 ? envelope.response : null;
+  const updated = orders.upsert(txn, {
+    idempotency_key: key,
+    policyholder,
+    booking_id: booking ? booking.id : order.booking_id || null,
+    booking: booking || null,
+    status: booking ? "confirmed" : order.status,
+  }, { event: "confirm offer", status: envelope.status, mode: envelope.mode, idempotency_key: key, attempts, envelope });
+
+  res.status(envelope.status === 0 ? 502 : 200).json({
+    served_from: "xcover",
+    treated_as_success: !!booking,
+    replayed: envelope.status === 409,
+    attempts,
+    order: updated,
+    envelope,
+  });
+});
+
+// POST /api/orders/:txn/pay — SIMULATED payment. RealCheap is merchant of record (XCover Single Payment):
+// the premium is a line item in RealCheap's own checkout, collected by RealCheap's PSP, which is out of scope here.
+app.post("/api/orders/:txn/pay", async (req, res) => {
+  const order = orders.get(req.params.txn);
+  if (!order) return res.status(404).json({ error: "unknown order" });
+  const { protection } = req.body || {};
+  await new Promise((r) => setTimeout(r, 600));
+  const premium = protection === "accepted" && order.premium_unit ? order.premium_unit * order.quantity : 0;
+  const updated = orders.upsert(order.transaction_id, {
+    protection: protection || "undecided",
+    payment: { status: "simulated_success", amount: order.unit_price * order.quantity + premium, at: new Date().toISOString() },
+    status: protection === "accepted" ? "paid" : "paid_no_protection",
+  }, { event: "payment (simulated)", status: 200 });
+  res.json({ order: updated });
 });
 
 // POST /api/webhooks - XCover webhook endpoint

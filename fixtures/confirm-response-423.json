@@ -1,0 +1,6 @@
+{
+  "_fixture": "Simulated in-flight duplicate: per the docs a 423 means the original request is still processing; retry after a short delay.",
+  "_status": 423,
+  "type": "locked",
+  "message": "Request with this idempotency key is still being processed"
+}

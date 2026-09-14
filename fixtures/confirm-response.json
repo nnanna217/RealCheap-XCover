@@ -1,0 +1,48 @@
+{
+  "_fixture": "Hand-written 2026-09-13 from the retail Confirm Offer 200 response schema (partner-docs.covergenius.com/offers/vertical-examples/product-retail/confirm-offer). Structure matches; values are placeholders.",
+  "id": "8AMKH-KQ8NR-INS",
+  "status": "CONFIRMED",
+  "currency": "USD",
+  "total_price": 49.99,
+  "total_price_formatted": "$49.99",
+  "partner_transaction_id": "RC-PLACEHOLDER",
+  "created_at": "2026-09-13T00:00:00Z",
+  "updated_at": "2026-09-13T00:00:00Z",
+  "pds_url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
+  "security_token": "tok_placeholder",
+  "quotes": [
+    {
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+      "policy_start_date": "2026-09-13T00:00:00Z",
+      "policy_end_date": "2028-09-13T00:00:00Z",
+      "status": "CONFIRMED",
+      "price": 49.99,
+      "price_formatted": "$49.99",
+      "policy": {
+        "policy_type": "product_protection",
+        "policy_type_version": "1",
+        "policy_type_slug": "product-protection",
+        "policy_type_group_name": "Retail",
+        "policy_name": "Protection Plan — 2 years accidental damage & extended warranty",
+        "policy_code": "RC-PP-2Y",
+        "policy_version": "pv-retail-protection-2026-01",
+        "category": "electronics",
+        "policy_currency": "USD"
+      },
+      "tax": { "total_tax": 3.70, "total_amount_without_tax": 46.29, "taxes": [{ "tax_amount": 3.70, "tax_code": "US_SALES_TAX", "tax_amount_formatted": "$3.70" }], "total_tax_formatted": "$3.70", "total_amount_without_tax_formatted": "$46.29" },
+      "benefits": [],
+      "commission": { "partner_commission": 12.50, "total_commission": 12.50, "partner_commission_formatted": "$12.50", "total_commission_formatted": "$12.50" },
+      "created_at": "2026-09-13T00:00:00Z",
+      "confirmed_at": "2026-09-13T00:00:00Z",
+      "pds_url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
+      "can_be_cancelled": true
+    }
+  ],
+  "coi": { "url": "https://www.xcover.com/en/coi/placeholder", "pdf": "https://www.xcover.com/en/coi/placeholder.pdf" },
+  "policyholder": { "first_name": "Ada", "last_name": "Lovelace", "email": "ada@example.com", "country": "US" },
+  "total_tax": 3.70,
+  "total_tax_formatted": "$3.70",
+  "total_premium": 49.99,
+  "total_premium_formatted": "$49.99",
+  "fnol_link": "https://www.xcover.com/en/claims/placeholder"
+}

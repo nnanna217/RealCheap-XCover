@@ -552,3 +552,22 @@ footer {
 .offer-actions { flex-wrap: nowrap; align-items: stretch; }
 .offer-actions .buy-now-btn, .offer-actions .btn-secondary { flex: 1 1 0; min-width: 0; white-space: normal; line-height: 1.25; }
 @media (max-width: 480px) { .offer-actions { flex-wrap: wrap; } .offer-actions .buy-now-btn, .offer-actions .btn-secondary { flex-basis: 100%; } }
+
+/* Payment step, result page (P7) */
+.payment-step { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
+.payment-step h3 { font-size: 1rem; margin: 0 0 10px; }
+.ph-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ph-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: #666; }
+.ph-grid input, .ph-grid select { padding: 7px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
+.payment-step .buy-now-btn { margin-top: 10px; }
+.result-container { background: #fff; border-radius: 12px; padding: 24px; }
+.policy-card { margin-top: 20px; background: #f0f6ff; border-radius: 10px; padding: 18px 20px; }
+.policy-card h3 { margin: 0 0 12px; display: flex; gap: 10px; align-items: center; }
+.policy-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 0.95rem; }
+.policy-facts dt { color: #666; }
+.policy-facts dd { margin: 0; }
+.demo-tools { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #b6c8e6; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.demo-tools .btn-secondary { width: auto; margin: 0; padding: 8px 12px; font-size: 0.85rem; }
+.call summary .idem code { color: #fbbf24; }
+.result-container { text-align: left; }
+.result-container > h2, .result-container > h2 + p { text-align: center; }
