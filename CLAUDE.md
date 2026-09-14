@@ -110,6 +110,18 @@ Source: the retail confirm-offer spec (`partner-docs.covergenius.com/offers/vert
 
 The payload panel shows the derived key on every confirm/cancel request so the panel can see it is stable across a retry.
 
+## Assumptions (numbered; A1–A6 mirror the six considerations, A7+ surfaced by testing)
+
+- **A1 — Eligibility surfaces as a create-offer 422, never a confirm-time one.** Fixture uses the documented `offer_quote_generation_failed` (item `offer_quote_pricing_error`, "No rate available for the supplied parameters"). If `E3CCM`'s eligibility is configured as offer-matching rules instead of a rating table, staging may return `offer_not_found_no_match_context` — the checkout treats any create-offer 4xx as "ineligible", so both render the same. The confirm-time `booking_quotes_unsuccessful` is the wrong stage: it would mean a shopper accepted and paid for a plan XCover then couldn't book — that is a fail-open case (refund the premium line, keep the order), not eligibility.
+- **A2 — RealCheap collects the premium** as a line item (XCover Single Payment; RealCheap is merchant of record).
+- **A3 — One policy per unit**, premium × quantity. Open: the confirm request sends one quote id regardless of quantity; whether XCover rates N units as one quote or N is for the CSE.
+- **A4 — RealCheap's OMS emits a return/refund event** we hook to cancel; XCover calculates the premium refund, RealCheap pays it, once.
+- **A5 — Currency and country come from the checkout session**; RealCheap list prices are USD; settlement per currency is narrative.
+- **A6 — `BOOKING_*` webhooks carry `partner_transaction_id`** (fallback: booking id); claim status arrives elsewhere (XClaim) — asked.
+- **A7 — The plan requested is a 2-year accidental-damage + extended-warranty plan** (`variant`/`term` = `2y`, `warranty.benefit` per the docs' example), and factory-direct goods carry a **1-year manufacturer warranty**. The second half is the shakier one: unbranded direct-from-factory goods may carry little or no manufacturer warranty — which is the pitch, and a discovery question for RealCheap.
+- **A8 — Ships ~7 days and delivers ~14 days after purchase** (`estimated_shipping_date` / `estimated_delivery_date`). These likely drive the policy start date; RealCheap's OMS knows the real dates.
+- **Omitted on purpose:** `customer.region` (country only is collected), `partner.customer_id` (guest checkout), `product.wholesale_value` (OMS-side data). All optional in the schema.
+
 ## Non-goals (decided — see TODO.md)
 
 - No database. The catalog is a module; "in production this is RealCheap's catalog service."

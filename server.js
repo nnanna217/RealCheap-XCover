@@ -46,23 +46,42 @@ app.post("/api/offers", async (req, res) => {
   // (the schema Cover Genius pointed to). `schema` names server-side config on the partner; if omitted the
   // partner's default schema is used, so it is only sent when XCOVER_SCHEMA is set. A 422
   // `offer_validation_schema_required` from staging is the signal to ask the CSE for the identifier.
+  // Plan requested and shipping assumptions — see CLAUDE.md → Assumptions (A7, A8).
+  const PLAN_TERM = "2y";
+  const purchase = new Date();
+  const plusDays = (d) => new Date(purchase.getTime() + d * 86400000).toISOString();
+  const device = /Mobi|Android|iPhone/i.test(req.get("User-Agent") || "") ? "mobile" : "desktop";
+
   const offerRequest = {
     ...(process.env.XCOVER_SCHEMA ? { schema: process.env.XCOVER_SCHEMA } : {}),
-    customer: { language, currency, country },
+    customer: { currency, country, language },
+    // customer.region omitted: the checkout collects country only. customer_id omitted: guest checkout, no login.
+    // RealCheap's own order reference — the natural key a retry must reuse so a re-sent request can't double-issue.
+    partner: {
+      transaction_id: txn,
+      metadata: { merchant_id: `REALCHEAP-ONLINE-${country}`, merchant_name: "RealCheap", sales_channel: "online", device },
+    },
     context: {
-      purchase_date: new Date().toISOString(),
+      purchase_date: purchase.toISOString(),
+      estimated_shipping_date: plusDays(7),   // A8: factory-direct — ships ~7 days, delivers ~14 days after purchase
+      estimated_delivery_date: plusDays(14),
       product: {
         sku: product.sku,
+        brand: product.brand,
+        model: product.model,
         title: product.name,
+        variant: PLAN_TERM,
         category: product.category,
+        category_id: product.category_id,
         quantity,
         condition: "new",
         description: product.description,
         retail_value: product.price,
+        // wholesale_value omitted: known to RealCheap's OMS, not to the storefront
+        term: PLAN_TERM,
       },
+      warranty: { manufacturer_duration: "1y", term: PLAN_TERM, benefit: "accidental damage and extended warranty" }, // A7
     },
-    // RealCheap's own order reference — the natural key a retry must reuse so a re-sent request can't double-issue.
-    partner: { transaction_id: txn },
   };
 
   // Eligibility is XCover's decision (their catalog classification), never this server's. In live mode the

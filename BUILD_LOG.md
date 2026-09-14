@@ -276,3 +276,16 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Stage 1 exit state (commit `fb0fc89`, 24 commits):** catalog · checkout with quote / opt-in / decline / quantity / country · eligibility (fixture 422) · payload panel → integration log · simulated payment · confirm with derived `x-idempotency-key`, ledger, 409/423 handling · opt-out · cancel with preview + single refund record · `BOOKING_*` webhooks with signed simulator · orders view. Build time ≈ 12 h.
 
+## T1 — 2026-09-14 — Test Case 1a: eligibility (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T1.
+
+**Which 422, and why.** Three codes on the error-versioning page could express "not eligible": (1) create-offer `offer_quote_generation_failed` / item `offer_quote_pricing_error` — an offer matched but nothing could be priced, "No rate available"; (2) create-offer `offer_not_found_no_match_context` — no offer matches the request context; (3) confirm-offer `booking_quotes_unsuccessful` / `booking_quote_failed` — the shape the candidate pasted. The fixture uses (1): eligibility has to be answered at *quote* time, before the shopper sees a plan, and an unrated category is literally "no rate available". (2) is equally plausible depending on whether Cover Genius configures `E3CCM`'s eligibility as rating or as offer-matching — not RealCheap's choice — and the checkout already treats any create-offer 4xx as ineligible, so both render identically. (3) is the wrong *stage*: it fires after the shopper accepted and paid, so reaching it means XCover quoted a plan it then couldn't book — a fail-open case (refund the premium line, keep the order), not an eligibility case. Recorded as **A1** in the new `CLAUDE.md` → Assumptions section.
+
+**Request body — fixed.** We sent only the required fields; valid, but not the documented shape. Now sent per the example: `partner.metadata { merchant_id, merchant_name, sales_channel, device (from User-Agent) }`, `context.estimated_shipping_date` / `estimated_delivery_date`, `product { brand, model, variant, category_id, term }`, and the `warranty {}` block. Three fields are **omitted on purpose** and say so in the code: `customer.region` (only country is collected), `partner.customer_id` (guest checkout), `product.wholesale_value` (OMS-side data). `products.js` gained `brand` ("Unbranded" — true for RealCheap), `model`, `category_id`.
+
+**Two new assumptions this surfaced, both worth a discovery question:** **A7** — the requested plan is 2-year accidental damage + extended warranty, and factory-direct goods carry a 1-year manufacturer warranty (the docs' example values). The second half is shaky: unbranded goods may carry little or no manufacturer warranty — which is the pitch. **A8** — ships ~7 days / delivers ~14 days after purchase; these likely drive the policy start date, and RealCheap's OMS knows the real dates.
+
+**Verified:** sleeve on a mobile UA from Canada → request shows the full documented shape (`device: "mobile"`, `merchant_id: REALCHEAP-ONLINE-CA`, `warranty{}`), XCover fixture still answers `422 offer_quote_generation_failed`.
+
+**Manual:** *(candidate to fill.)*

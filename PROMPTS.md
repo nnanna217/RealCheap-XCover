@@ -76,3 +76,8 @@ Stages are separated by `==================` lines. Entry numbers stay unique ac
 
 Prompts the candidate gives after exercising the whole system end to end. Each is logged verbatim as `T<n>`, with the finding that prompted it, and answered in `BUILD_LOG.md` under the same number.
 
+## T1 — 2026-09-14 — Test Case 1a: SKU / category eligibility (sleeve)
+
+**Findings reported:** ledger empty on start — PASS · ineligible sleeve shows "XCover did not return a plan for this product" — PASS · fixture tag — PASS · panel shows request and HTTP 422 `validation_error` — PASS · **request body does not match the documented payload format** (product-retail create-offer page) — FAIL · response payload partially matches — PARTIAL · OMS shows the order with correct transaction id, Refund greyed out, XCover ids blank — PASS.
+
+> Ground the response payload using the error-versioning page. There seem to be separate 422 structures for Confirm Offer (`booking_quotes_unsuccessful`) and Create Offer (`offer_quote_generation_failed`). Explain which 422 approach you took and which best matches this eligibility case, then add it as an assumption.
