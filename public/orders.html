@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders — RealCheap OMS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="orders-page">
+    <div class="container">
+        <header>
+            <h1><a href="/" class="brand-link">RealCheap</a> <span class="header-sub">· Orders</span></h1>
+            <p class="tagline">What RealCheap's order management system sees — one row per order, the protection plan as a line item</p>
+        </header>
+
+        <main>
+            <div class="orders-toolbar">
+                <p class="muted small">Ledger keyed by <code>partner.transaction_id</code>. Repeat confirms and refunds are answered here without calling XCover — the <em>Attempts</em> column counts them. In-memory: restarts empty.</p>
+                <label class="small muted"><input type="checkbox" id="autoRefresh" checked> auto-refresh</label>
+                <button type="button" id="refreshBtn" class="btn-secondary small-btn">Refresh</button>
+            </div>
+            <div class="table-wrap">
+                <table class="line-items orders" id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Line items</th>
+                            <th>XCover ids</th>
+                            <th>Status</th>
+                            <th>Attempts</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersBody"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+                </table>
+            </div>
+            <section id="unmatched" hidden>
+                <h3>Unmatched webhooks <span class="small muted">— events for bookings this OMS doesn't know; reconciliation queue</span></h3>
+                <ul id="unmatchedList" class="small"></ul>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 RealCheap</p>
+        </footer>
+    </div>
+
+    <script src="/js/orders.js"></script>
+</body>
+</html>

@@ -580,3 +580,24 @@ footer {
 .webhook-card .line-items.small td, .webhook-card .line-items.small th { padding: 6px 8px; }
 .demo-tools select { padding: 5px 8px; border-radius: 6px; border: 1px solid #ccc; }
 .call.inbound summary code { color: #c4b5fd; }
+
+/* Orders view (P8) */
+.header-sub { font-weight: normal; opacity: 0.8; }
+.orders-toolbar { display: flex; align-items: center; gap: 16px; padding: 16px 0 8px; }
+.orders-toolbar p { flex: 1; margin: 0; }
+.table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; padding: 8px 16px 16px; }
+.line-items.orders td { vertical-align: top; }
+.line-items.orders .plan-line { margin-top: 8px; padding: 6px 8px; background: #f0f6ff; border-radius: 6px; }
+.line-items.orders .ids div { margin: 2px 0; white-space: nowrap; }
+.line-items.orders .ids code { font-size: 0.75rem; }
+.call-status.quoted { background: #e0e7ff; color: #3730a3; }
+.call-status.paid { background: #fef3c7; color: #92400e; }
+.call-status.warn { background: #ffedd5; color: #9a3412; }
+.small-btn { width: auto; margin: 0 6px 6px 0; padding: 6px 10px; font-size: 0.8rem; display: inline-block; text-align: center; }
+.actions .act-msg { max-width: 260px; }
+#unmatched { margin-top: 20px; background: #fff7ed; border-radius: 10px; padding: 14px 18px; }
+#unmatched h3 { margin: 0 0 8px; }
+.orders-page .container { max-width: 1400px; }
+.line-items.orders th:nth-child(2), .line-items.orders td:nth-child(2) { min-width: 220px; }
+.line-items.orders td:nth-child(1) code { font-size: 0.8rem; }
+button[disabled] { opacity: 0.45; cursor: not-allowed; }

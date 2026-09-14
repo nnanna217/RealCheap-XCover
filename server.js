@@ -108,9 +108,12 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   // Rule 3 — the ledger is checked BEFORE XCover is called. A booking that already exists is returned as-is;
   // XCover is not contacted, so a retried confirm cannot issue a second policy even if the key were wrong.
   if (order.booking_id) {
-    return res.json({ served_from: "ledger", order, envelope: null,
-      note: `Order ${txn} already has booking ${order.booking_id}; XCover was not called.` });
+    const note = `Order ${txn} already has booking ${order.booking_id}; XCover was not called.`;
+    const updated = orders.upsert(txn, {}, { event: "confirm offer (repeat)", status: 200, outcome: "served_from_ledger", note });
+    return res.json({ served_from: "ledger", order: updated, envelope: null, note });
   }
+  // Invariant: confirm fires only after payment succeeded. Enforced here, not just by the page's order of operations.
+  if (!order.payment) return res.status(409).json({ error: "order has not been paid; confirm is only sent after payment succeeds", order });
   if (order.offer_id !== offer_id || !quote_ids.length || !quote_ids.every((q) => order.quote_ids.includes(q))) {
     return res.status(409).json({ error: "offer/quotes do not match what was quoted for this order", order });
   }
@@ -163,7 +166,11 @@ app.post("/api/orders/:txn/opt-out", async (req, res) => {
   if (!order) return res.status(404).json({ error: "unknown order", transaction_id: txn });
   if (!order.offer_id) return res.status(409).json({ error: "no offer was made on this order; nothing to opt out of", order });
   if (order.booking_id) return res.status(409).json({ error: "offer was confirmed; opt-out no longer applies", order });
-  if (order.opt_out) return res.json({ served_from: "ledger", order, envelope: null, note: `Opt-out for ${txn} already recorded at ${order.opt_out.at}; XCover was not called.` });
+  if (order.opt_out) {
+    const note = `Opt-out for ${txn} already recorded at ${order.opt_out.at}; XCover was not called.`;
+    const updated = orders.upsert(txn, {}, { event: "opt out (repeat)", status: 200, outcome: "served_from_ledger", note });
+    return res.json({ served_from: "ledger", order: updated, envelope: null, note });
+  }
 
   const envelope = await xcover.call("POST", `offers/${order.offer_id}/opt_out/`, null, "opt-out-response.json");
   const updated = orders.upsert(txn, envelope.ok ? { opt_out: { at: new Date().toISOString() }, protection: "declined", status: "declined" } : {},
@@ -184,8 +191,9 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
 
   // Rule 5 — already refunded: answer from the ledger, call nothing, pay nothing again.
   if (order.refund) {
-    return res.json({ served_from: "ledger", order, envelopes: [],
-      note: `Order ${txn} was already refunded ${order.refund.total_formatted} on ${order.refund.at}; XCover was not called and no second refund was issued.` });
+    const note = `Order ${txn} was already refunded ${order.refund.total_formatted} on ${order.refund.at}; XCover was not called and no second refund was issued.`;
+    const updated = orders.upsert(txn, {}, { event: "refund (repeat)", status: 200, outcome: "served_from_ledger", note });
+    return res.json({ served_from: "ledger", order: updated, envelopes: [], note });
   }
 
   const productRefund = order.unit_price * order.quantity;

@@ -247,3 +247,17 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified (script, 8 cases + browser):** applied / duplicate / cancelled+refund_due / stale / null-txn fallback / 401 / unmatched / stored_unhandled; history reads `… confirm offer → webhook BOOKING_CREATED(applied) → …(duplicate) → webhook BOOKING_CANCELLED(applied) → …(stale) → webhook CLAIM_STATUS_UPDATED(stored_unhandled)`. Browser: result page → simulate `BOOKING_CANCELLED` → table row `BOOKING_CANCELLED (simulated) · partner_transaction_id · applied`, policy pill `CANCELLED`, refund-due banner `US$49.99`, inbound entry in the integration log.
 
 **Manual:** *(candidate to fill.)*
+
+## P11 — 2026-09-13 — Orders view (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P11.
+
+**Built:** `orders.html` + `orders.js` over the existing `GET /api/orders`. One row per order: order ref + time · line items (product, and the plan as its own tinted line with premium · XCover) · XCover ids (offer, quote, booking, idempotency key — truncated, full on hover) · **status pill in the brief's lifecycle vocabulary** (Offer created → Paid · confirming → Policy active → Cancelled; plus Offer declined / No offer / Refunded · no plan), with "via webhook BOOKING_*" when a webhook moved it and a red **refund due** chip when `BOOKING_CANCELLED` arrived with no RealCheap refund on record · **Attempts** — confirm / refund / opt-out counts split into *XCover called* vs *ledger* · actions: View, **Refund order** (re-labels to "Refund again (demo)" once refunded), Re-send confirm (demo). Unmatched webhooks get their own reconciliation list. Auto-refresh every 5 s (pauses while an action message is showing) so webhook-driven changes appear live. Linked from every storefront footer as "Orders (OMS view)".
+
+**Idempotency made visible.** Ledger-served answers now write a history event (`confirm offer (repeat)`, `refund (repeat)`, `opt out (repeat)`, outcome `served_from_ledger`) so the Attempts column can say, e.g., `confirm: 2 (XCover called 1, ledger 1)` — the count is evidence, not a claim.
+
+**Found while verifying, fixed before commit:** the server allowed confirm on an order that was never paid — the "confirm only after payment" invariant lived only in the page's order of operations. Now enforced server-side (409). The two 409/423 test orders had exposed it by having a booking with no payment (and therefore a disabled Refund button).
+
+**Verified in a browser:** six seeded orders render in five distinct states including one moved by webhook; on a paid+confirmed order, Re-send confirm → *served_from: ledger*, attempts `2 (XCover 1, ledger 1)`; Refund → cancelled with XCover, one refund, status Cancelled; Refund again → *served_from: ledger*, `refund: 2 (XCover 1, ledger 1)`; unmatched booking listed in the reconciliation section; unpaid confirm → 409.
+
+**Manual:** *(candidate to fill.)*

@@ -59,3 +59,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P10 — 2026-09-13 — BOOKING_* webhooks
 
 > Build out the BOOKING_* webhooks logic. Build out the routing of BOOKING_CREATED / BOOKING_CANCELLED by partner_transaction_id into the ledger. Also build a way to simulate an inbound event, and document a step-by-step approach to do this.
+
+## P11 — 2026-09-13 — Orders view (P8 in the plan)
+
+> Proceed with the Orders view (`orders.html` + in-memory store) — a Map and a table. The brief's tech stack is a proprietary OMS, and considerations #4 and #6 currently have nowhere to appear except server logs. One page listing each order with its line items (product line, protection-plan line carrying the XCover offer / quote / booking ids) and a status that moves: offer created → confirmed → policy active → cancelled / claim status from the webhook. Home for the "Refund order" button. Also where idempotency becomes visible: a Map keyed by partner.transaction_id, so a re-sent confirm returns the existing order rather than issuing a second policy.

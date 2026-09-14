@@ -58,7 +58,7 @@ Claim status: the Offers API documents no claim event (claims are XClaim's surfa
 - `lib/orders.js` — the in-memory order ledger keyed by `transaction_id`; every XCover call and webhook is appended to the order's history
 - `lib/webhooks.js` — inbound `BOOKING_*` routing, dedup, ordering guard
 - `scripts/send-webhook.sh` — simulate a signed inbound webhook for an order
-- `public/` — catalog (`index.html`), product, checkout, result pages; plain HTML/JS, no build step
+- `public/` — catalog (`index.html`), product, checkout, result pages, and `orders.html` (the OMS view of the ledger: one row per order, plan as a line item, status lifecycle, attempts vs. XCover calls, Refund / re-send-confirm actions); plain HTML/JS, no build step
 - `public/js/products.js` — the three-SKU catalog, shared by browser and server
 - `fixtures/` — offer response used in fixture mode
 - `CLAUDE.md` — the guidelines the coding agent worked under, plus the brief's goals, the six technical considerations as verifiable goals, non-goals, invariants, and the idempotency rules
