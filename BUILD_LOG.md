@@ -223,3 +223,27 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified (script + browser):** opt-out → `204`, status `declined`; repeat → `served_from: ledger`; ineligible order → 409. Browser: decline → Continue → integration log shows `opt out … HTTP 204` beneath the create-offer entry; Pay button reads `$549.00`; table row "Protection Plan — Declined — $0.00". The panel now prints "(no body)" / "(204 No Content)" instead of `null` for body-less calls.
 
 **Manual:** *(candidate to fill.)*
+
+## P10 — 2026-09-13 — BOOKING_* webhooks, consideration #6 (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P10.
+
+**Read the documented payloads first** (Webhooks page): `{ event, payload: { id, status, currency, total_price, partner_transaction_id, quotes[] } }` for `BOOKING_CREATED` / `UPDATED` / `CANCELLED`; `BOOKING_CANCELLED` quotes carry `refund_value`. Two things the docs' own examples show that shaped the design: **`partner_transaction_id` is `null` in every example**, so routing needs a fallback; and **there is no event id and no sequence number**, so dedup and ordering have to be derived. Both are worth raising with Cover Genius — the second is the "carry a version per aggregate" point from the Round 2 prep, now with evidence.
+
+**Built (`lib/webhooks.js`, wired into the existing verified `/api/webhooks`):**
+- **Route** by `partner_transaction_id` → ledger; fallback by booking id (`payload.id`).
+- **Dedup** on a UUID v5 of (event, booking id, status, sorted quote statuses): a redelivery is acknowledged 200 but not re-applied.
+- **Ordering guard** by status precedence (`CANCELLED` > `CONFIRMED`): a `CONFIRMED` event arriving after `CANCELLED` is marked `stale` and ignored. Timestamps aren't trusted for this; precedence is.
+- **Apply:** `BOOKING_CREATED`/`UPDATED` merge the booking (per quote by id) and mark the order confirmed; `BOOKING_CANCELLED` marks it cancelled and, if RealCheap has no refund on record, **flags `refund_due`** with the summed `refund_value` — XCover calculates, RealCheap pays, so it is flagged, never auto-paid. Consideration #4 from the other direction.
+- **Unknown booking** → 200 (so XCover stops retrying) and parked under `UNMATCHED-<booking>` for reconciliation. **Undocumented event** (e.g. a future `CLAIM_*`) → stored on the order, no state change — nothing invented. **Bad signature** → 401 (P1's verifier, unchanged).
+- Every event, with outcome, is appended to the order's history; the integration log now renders inbound entries (`← POST /api/webhooks`, routed-by, dedup key, outcome) alongside outbound calls, so the whole conversation reads in one place.
+
+**Simulator:** `POST /api/demo/webhook` builds the documented payload for an order from the ledger, **signs it exactly as XCover would** (HMAC over `date: <Date>` with `XCOVER_WEBHOOK_SECRET`), and POSTs to this server's own `/api/webhooks` — so the request genuinely traverses verification and routing. Options: `tamper` (wrong secret → 401), `omit_partner_txn` (null, as in the docs → booking-id fallback). Reachable from the result page ("Demo: simulate this webhook" with an event picker and the two checkboxes) and from `scripts/send-webhook.sh <ref> <event> [--tamper] [--no-txn]`. **Step-by-step documented in README → "Simulating an inbound XCover webhook".** Demo key/secret set in `.env`; `.env.example` says the simulator needs one.
+
+**Found while verifying, fixed before commit:**
+- Pressing Back from the result page re-quoted the completed order under the same ref and `/api/offers` reset its status to `quoted`. A completed order is not a cart: if the ref belongs to a paid/confirmed/refunded/opted-out order, a fresh ref is minted. Verified: re-quote before paying keeps the ref; after paying mints a new one and the old order is untouched.
+- Result heading said "your laptop is protected" after a webhook cancellation; now "protection plan cancelled".
+
+**Verified (script, 8 cases + browser):** applied / duplicate / cancelled+refund_due / stale / null-txn fallback / 401 / unmatched / stored_unhandled; history reads `… confirm offer → webhook BOOKING_CREATED(applied) → …(duplicate) → webhook BOOKING_CANCELLED(applied) → …(stale) → webhook CLAIM_STATUS_UPDATED(stored_unhandled)`. Browser: result page → simulate `BOOKING_CANCELLED` → table row `BOOKING_CANCELLED (simulated) · partner_transaction_id · applied`, policy pill `CANCELLED`, refund-due banner `US$49.99`, inbound entry in the integration log.
+
+**Manual:** *(candidate to fill.)*

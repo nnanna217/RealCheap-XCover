@@ -55,3 +55,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P9 — 2026-09-13 — Opt-out on decline
 
 > Proceed with opt-out on decline.
+
+## P10 — 2026-09-13 — BOOKING_* webhooks
+
+> Build out the BOOKING_* webhooks logic. Build out the routing of BOOKING_CREATED / BOOKING_CANCELLED by partner_transaction_id into the ledger. Also build a way to simulate an inbound event, and document a step-by-step approach to do this.

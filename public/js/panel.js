@@ -5,12 +5,30 @@ function pretty(obj) {
 }
 
 function renderIntegrationLog(entries, { badgeEl, listEl }) {
-  const calls = entries.filter((c) => c.envelope);
-  const mode = calls.length ? calls[0].envelope.mode : null;
+  const calls = entries.filter((c) => c.envelope || c.webhook);
+  const firstOut = calls.find((c) => c.envelope);
+  const mode = firstOut ? firstOut.envelope.mode : null;
   badgeEl.textContent = mode ? mode.toUpperCase() : "—";
   badgeEl.className = `mode-badge ${mode || ""}`;
 
   listEl.innerHTML = calls.length ? calls.map((c, i) => {
+    if (c.webhook) {
+      // Inbound: XCover → us. Shown in the same log so the whole conversation reads in one place.
+      const w = c.webhook, at = c.at instanceof Date ? c.at : new Date(c.at);
+      return `
+    <details class="call inbound" ${i === 0 ? "open" : ""}>
+      <summary>
+        <span class="call-label">${c.label}</span>
+        <code>← POST /api/webhooks</code>
+        <span class="call-status ${c.outcome === "applied" ? "ok" : ""}">${c.outcome}</span>
+        <span class="muted small">${w.source} · routed by ${w.matched_by || "—"} · ${at.toLocaleTimeString()}</span>
+      </summary>
+      <div class="call-body">
+        <div><h4>Event received</h4><pre>${pretty(w.body)}</pre></div>
+        <div><h4>Handling</h4><pre>${pretty({ signature: "verified", dedup_key: w.key, matched_by: w.matched_by, outcome: c.outcome })}</pre></div>
+      </div>
+    </details>`;
+    }
     const e = c.envelope;
     const status = e.error ? `error · ${e.error}` : `HTTP ${e.status}`;
     const at = c.at instanceof Date ? c.at : new Date(c.at);

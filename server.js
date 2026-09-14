@@ -5,6 +5,8 @@ const { verifyXcoverWebhook } = require("./lib/xcover-auth");
 const xcover = require("./lib/xcover-client");
 const orders = require("./lib/orders");
 const { confirmKey } = require("./lib/idempotency");
+const webhooks = require("./lib/webhooks");
+const crypto = require("crypto");
 const { findProduct } = require("./public/js/products");
 
 const app = express();
@@ -34,9 +36,11 @@ app.post("/api/offers", async (req, res) => {
   const quantity = Math.max(1, parseInt(qty, 10) || 1);
   // Idempotency rule 1: one order reference per cart. The browser sends back the one it was given;
   // a new one is minted only when the cart has none yet. Never regenerate on re-quote, reload or retry.
-  const txn = /^RC-[A-Z0-9-]{6,}$/.test(transaction_id || "")
-    ? transaction_id
-    : `RC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+  // …and a completed order is no longer a cart: if the ref already belongs to a paid/confirmed/refunded order
+  // (the shopper pressed Back after checkout), start a new order rather than mutate the finished one.
+  const prior = /^RC-[A-Z0-9-]{6,}$/.test(transaction_id || "") ? orders.get(transaction_id) : null;
+  const reusable = prior ? !(prior.payment || prior.booking_id || prior.refund || prior.opt_out) : /^RC-[A-Z0-9-]{6,}$/.test(transaction_id || "");
+  const txn = reusable ? transaction_id : `RC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
 
   // Request shape: partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer
   // (the schema Cover Genius pointed to). `schema` names server-side config on the partner; if omitted the
@@ -222,6 +226,41 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
   res.json({ served_from: "xcover", cancelled: !!cancelBody, order: updated, envelopes });
 });
 
+// POST /api/demo/webhook — SIMULATE an inbound XCover webhook for an order.
+// Builds the documented payload for the event from the ledger, signs it EXACTLY as XCover would (HMAC over the
+// Date header with XCOVER_WEBHOOK_SECRET), and POSTs it to this server's own /api/webhooks — so the request
+// genuinely traverses signature verification and routing. Body: { event: "BOOKING_CREATED"|"BOOKING_UPDATED"|
+// "BOOKING_CANCELLED", tamper?: true, omit_partner_txn?: true }. Also reachable from scripts/send-webhook.sh.
+app.post("/api/demo/webhook", async (req, res) => {
+  const { transaction_id, event = "BOOKING_CANCELLED", tamper = false, omit_partner_txn = false } = req.body || {};
+  const order = orders.get(transaction_id);
+  if (!order) return res.status(404).json({ error: "unknown order" });
+  if (!order.booking_id) return res.status(409).json({ error: "order has no booking; XCover would not send a booking event" });
+  const secret = process.env.XCOVER_WEBHOOK_SECRET;
+  if (!secret) return res.status(409).json({ error: "XCOVER_WEBHOOK_SECRET is not set in .env — the simulator signs exactly as XCover would, so it needs the shared secret" });
+
+  const status = event === "BOOKING_CANCELLED" ? "CANCELLED" : "CONFIRMED";
+  const quotes = (order.booking && order.booking.quotes || []).map((q) => ({
+    id: q.id, policy_start_date: q.policy_start_date, policy_end_date: q.policy_end_date, status,
+    price: q.price, price_formatted: q.price_formatted, policy: q.policy, total_renewed_times: 0,
+    ...(status === "CANCELLED" ? { refund_value: q.price } : {}),
+  }));
+  const body = { event, payload: {
+    id: order.booking_id, status, currency: order.booking.currency || "USD",
+    total_price: status === "CANCELLED" ? 0 : order.booking.total_price, total_price_formatted: status === "CANCELLED" ? "US$0.00" : order.booking.total_price_formatted,
+    partner_transaction_id: omit_partner_txn ? null : order.transaction_id, quotes,
+  } };
+
+  // Sign like XCover: HMAC-SHA256 over `date: <Date>` (their JS reference), base64, URL-encoded.
+  const date = new Date().toUTCString();
+  const sig = encodeURIComponent(crypto.createHmac("sha256", tamper ? "wrong-secret" : secret).update(`date: ${date}`, "utf8").digest("base64"));
+  const headers = { "Content-Type": "application/json", Date: date, "X-Api-Key": process.env.XCOVER_WEBHOOK_KEY || "demo-key",
+    Authorization: `Signature keyId="${process.env.XCOVER_WEBHOOK_KEY || "demo-key"}",algorithm="hmac-sha256",signature="${sig}"`, "X-RealCheap-Simulated": "1" };
+  const r = await fetch(`http://localhost:${PORT}/api/webhooks`, { method: "POST", headers, body: JSON.stringify(body) });
+  const text = await r.text(); let json; try { json = JSON.parse(text); } catch { json = text; }
+  res.json({ sent: { url: "/api/webhooks", headers: { ...headers, Authorization: headers.Authorization.replace(/signature="[^"]+"/, 'signature="***"') }, body }, received: { status: r.status, body: json }, order: orders.get(transaction_id) });
+});
+
 // POST /api/orders/:txn/pay — SIMULATED payment. RealCheap is merchant of record (XCover Single Payment):
 // the premium is a line item in RealCheap's own checkout, collected by RealCheap's PSP, which is out of scope here.
 app.post("/api/orders/:txn/pay", async (req, res) => {
@@ -266,17 +305,14 @@ app.post("/api/webhooks", async (req, res) => {
       console.warn("⚠️  Add XCOVER_WEBHOOK_SECRET to .env for production use");
     }
 
-    // Here you would typically:
-    // 1. Update order / policy status in your database
-    // 2. Notify the customer
-    // Example:
-    // await updatePolicyStatus(req.body);
-
-    console.log("========================\n");
+    // Route the event into the ledger by partner_transaction_id (fallback: booking id). See lib/webhooks.js.
+    const result = webhooks.applyEvent(req.body, { source: req.get("X-RealCheap-Simulated") ? "simulated" : "xcover" });
+    console.log("Outcome:", result.outcome, result.note || "");
+    if (result.outcome === "rejected") return res.status(400).json({ error: result.reason });
 
     // Always return 200 to acknowledge receipt
     // This tells XCover to stop retrying this webhook
-    res.status(200).send("[accepted]");
+    res.status(200).json({ accepted: true, outcome: result.outcome, key: result.key, note: result.note });
   } catch (error) {
     console.error("Error processing webhook:", error);
     // Return 500 so XCover will retry the webhook

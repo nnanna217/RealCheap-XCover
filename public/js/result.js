@@ -15,7 +15,7 @@ function render(o) {
   const q = b && b.quotes && b.quotes[0];
   const premium = o.protection === "accepted" && o.premium_unit ? o.premium_unit * o.quantity : 0;
   $("result").innerHTML = `
-    <h2>${o.refund ? "Order returned and refunded" : b ? "Order confirmed — your laptop is protected" : "Order confirmed"}</h2>
+    <h2>${o.refund ? "Order returned and refunded" : b && b.status === "CANCELLED" ? "Order confirmed — protection plan cancelled" : b ? "Order confirmed — your laptop is protected" : "Order confirmed"}</h2>
     <p class="muted">Order ref <code>${o.transaction_id}</code> · ${o.payment ? `paid ${money(o.payment.amount, "USD")} (simulated)` : "unpaid"}</p>
 
     <table class="line-items">
@@ -45,6 +45,24 @@ function render(o) {
       </div>
     </section>` : o.protection === "declined" ? `<p class="muted">Protection plan declined.</p>` : `<p class="muted">No protection plan on this order.</p>`}
 
+    ${b ? `
+    <section class="webhook-card">
+      <h3>Webhooks from XCover <span class="small muted">— consideration #6</span></h3>
+      ${(o.history || []).filter((h) => h.webhook).length ? `
+      <table class="line-items small">
+        <thead><tr><th>Received</th><th>Event</th><th>Routed by</th><th>Outcome</th></tr></thead>
+        <tbody>${o.history.filter((h) => h.webhook).map((h) => `<tr><td>${new Date(h.at).toLocaleTimeString()}</td><td><code>${h.webhook.body.event}</code> <span class="muted">(${h.webhook.source})</span></td><td>${h.webhook.matched_by || "—"}</td><td><span class="call-status ${h.outcome === "applied" ? "ok" : ""}">${h.outcome}</span></td></tr>`).join("")}</tbody>
+      </table>` : `<p class="small muted">None yet. XCover sends <code>BOOKING_CREATED</code> on confirm and <code>BOOKING_CANCELLED</code> on cancel; each is signed, verified, deduped, and routed to this order by <code>partner_transaction_id</code>.</p>`}
+      ${o.refund_due ? `<p class="offer-warning">XCover reports this booking cancelled and no RealCheap refund is on record — premium refund of ${money(o.refund_due.premium, o.refund_due.currency || "USD")} is <strong>due</strong> to the customer.</p>` : ""}
+      <div class="demo-tools">
+        <select id="whEvent" class="small"><option>BOOKING_CREATED</option><option>BOOKING_UPDATED</option><option selected>BOOKING_CANCELLED</option></select>
+        <button type="button" id="whBtn" class="btn-secondary">Demo: simulate this webhook</button>
+        <label class="small muted"><input type="checkbox" id="whTamper"> bad signature</label>
+        <label class="small muted"><input type="checkbox" id="whNoTxn"> null partner_transaction_id</label>
+        <span class="small muted" id="whMsg">Signed as XCover would, delivered to this server's /api/webhooks.</span>
+      </div>
+    </section>` : ""}
+
     ${o.payment ? `
     <section class="refund-card">
       <h3>Returns</h3>
@@ -60,8 +78,19 @@ function render(o) {
 
     <div class="result-actions"><a href="/" class="btn-secondary">Back to shop</a></div>`;
 
-  const entries = [...o.history].reverse().map((h) => ({ label: h.event, at: h.at, envelope: h.envelope }));
+  const entries = [...o.history].reverse().map((h) => ({ label: h.event, at: h.at, envelope: h.envelope, webhook: h.webhook, outcome: h.outcome }));
   renderIntegrationLog(entries, { badgeEl: $("modeBadge"), listEl: $("payloadEntries") });
+
+  const whBtn = $("whBtn");
+  if (whBtn) whBtn.addEventListener("click", async () => {
+    whBtn.disabled = true; $("whMsg").textContent = "Sending…";
+    const res = await fetch("/api/demo/webhook", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction_id: txn, event: $("whEvent").value, tamper: $("whTamper").checked, omit_partner_txn: $("whNoTxn").checked }) });
+    const r = await res.json();
+    if (r.error) { $("whMsg").textContent = r.error; whBtn.disabled = false; return; }
+    $("whMsg").innerHTML = `handler answered <strong>HTTP ${r.received.status}</strong> — ${typeof r.received.body === "object" ? `outcome <strong>${r.received.body.outcome}</strong>${r.received.body.note ? " · " + r.received.body.note : ""}` : r.received.body}`;
+    if (r.received.status === 200) setTimeout(() => render(r.order), 900); else whBtn.disabled = false;
+  });
 
   const refundBtn = $("refundBtn");
   if (refundBtn) refundBtn.addEventListener("click", async () => {

@@ -7,9 +7,9 @@ Decisions raised during the build that are deliberately *not* being done yet, wi
 - **Relational DB for the catalog.** Raised after P3 (price/category are looked up server-side). Decided against: three SKUs, a 12-hour cap, nothing on the rubric scores persistence, and `products.js` already makes the point that the client never supplies a price. Demo line: "in production this lookup is RealCheap's catalog service / OMS; here it's a module." If time is left: SQLite (`better-sqlite3`) seeded from `products.js`, ~30 min, one file.
 - **Re-add Adyen as the PSP behind the Pay button.** XCover's payment guide makes RealCheap the merchant of record under Single Payment, so a real PSP would only ever sit behind the simulated "Pay" step. Out of scope until the protection flow is complete (P1 note).
 
-## Moved earlier — the order store is the idempotency ledger, not just a view
+## Done — the order store landed with confirm (P7)
 
-- **`lib/orders.js` (in-memory `Map` keyed by `transaction_id`) now lands with the confirm step**, because it is where idempotency is enforced (see `CLAUDE.md` → Idempotency). The `orders.html` *view* stays as P8.
+- `lib/orders.js` is the idempotency ledger and now also the webhook target (P10). Only the `orders.html` *view* remains.
 
 ## Will do — P8, after P7 (fail-open), before the deck
 

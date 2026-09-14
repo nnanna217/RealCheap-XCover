@@ -574,3 +574,9 @@ footer {
 
 .refund-card { margin-top: 16px; background: #fff7ed; border-radius: 10px; padding: 16px 20px; }
 .refund-card h3 { margin: 0 0 8px; }
+
+.webhook-card { margin-top: 16px; background: #f5f3ff; border-radius: 10px; padding: 16px 20px; }
+.webhook-card h3 { margin: 0 0 8px; }
+.webhook-card .line-items.small td, .webhook-card .line-items.small th { padding: 6px 8px; }
+.demo-tools select { padding: 5px 8px; border-radius: 6px; border: 1px solid #ccc; }
+.call.inbound summary code { color: #c4b5fd; }
