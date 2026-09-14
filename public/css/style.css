@@ -601,3 +601,4 @@ footer {
 .line-items.orders th:nth-child(2), .line-items.orders td:nth-child(2) { min-width: 220px; }
 .line-items.orders td:nth-child(1) code { font-size: 0.8rem; }
 button[disabled] { opacity: 0.45; cursor: not-allowed; }
+.policy-card.pending { background: #fff7ed; }

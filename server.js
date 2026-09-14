@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => { if (/\.(js|css)$/.test(req.path)) res.set("Cache-Control", "no-store"); next(); });
 app.use(express.static(path.join(__dirname, "public")));
 
 // Routes
@@ -139,13 +140,17 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   }
   // Invariant: confirm fires only after payment succeeded. Enforced here, not just by the page's order of operations.
   if (!order.payment) return res.status(409).json({ error: "order has not been paid; confirm is only sent after payment succeeds", order });
-  if (order.offer_id !== offer_id || !quote_ids.length || !quote_ids.every((q) => order.quote_ids.includes(q))) {
-    return res.status(409).json({ error: "offer/quotes do not match what was quoted for this order", order });
-  }
+  // A confirm we refuse ourselves still gets recorded: after payment, an unconfirmed plan is a liability the
+  // OMS must see and retry — never a silent no-op.
+  const reject = (status, error) => {
+    const updated = orders.upsert(txn, { confirm_error: { error, at: new Date().toISOString() } }, { event: "confirm offer (rejected locally)", status, outcome: "rejected", note: error });
+    return res.status(status).json({ error, order: updated });
+  };
+  if (order.offer_id !== offer_id || !quote_ids.length || !quote_ids.every((q) => order.quote_ids.includes(q)))
+    return reject(409, "offer/quotes do not match what was quoted for this order");
   // Confirm Offer guide: policyholder email, phone, first_name, last_name, country are required.
-  for (const f of ["first_name", "last_name", "email", "phone", "country"]) {
-    if (!policyholder[f]) return res.status(400).json({ error: `policyholder.${f} is required` });
-  }
+  for (const f of ["first_name", "last_name", "email", "phone", "country"])
+    if (!policyholder[f]) return reject(400, `policyholder.${f} is required`);
 
   // Rule 2 — the key is derived from the natural key of this operation, never minted per attempt.
   const key = confirmKey(txn, offer_id, quote_ids);
@@ -188,6 +193,7 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
     booking_id: booking ? booking.id : order.booking_id || null,
     booking: booking || order.booking || null,
     status: booking ? "confirmed" : order.status,
+    confirm_error: booking ? null : { error: envelope.error || `XCover replied HTTP ${envelope.status}${envelope.response && envelope.response.code ? " " + envelope.response.code : ""}`, at: new Date().toISOString() },
     ...(review.length ? { needs_review: review } : {}),
   }, { event: bypass ? "confirm offer (forced past ledger)" : "confirm offer", status: envelope.status, mode: envelope.mode, idempotency_key: key, attempts, envelope, ...(review.length ? { review } : {}) });
 

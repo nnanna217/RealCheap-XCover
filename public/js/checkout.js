@@ -210,7 +210,12 @@ async function pay() {
     });
     const r = await res.json();
     if (r.envelope) logCall("confirm offer", r.envelope);
-    // A failed confirm after a successful payment is RealCheap's problem to retry — the shopper is never blocked.
+    if (!res.ok || r.error || (r.order && !r.order.booking_id)) {
+      // Fail open, never silent: the shopper keeps their order, but a paid-for plan that isn't confirmed is
+      // recorded on the order (confirm_error) and retried from the result page / OMS.
+      $("payMsg").textContent = `Payment received. The protection plan could not be confirmed yet (${r.error || "XCover did not confirm"}) — it will be retried.`;
+      await new Promise((ok) => setTimeout(ok, 1500));
+    }
   }
   window.location.href = `/result.html?txn=${encodeURIComponent(state.transactionId)}`;
 }

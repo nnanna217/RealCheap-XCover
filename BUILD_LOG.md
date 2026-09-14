@@ -337,3 +337,21 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 **Verified:** no phone → 400; body keys `quotes, policyholder, partner_transaction_id, payment_details`, `partner_transaction_id` = our order ref, `payment_details.transaction_id = PAY-…`; Germany qty 2 → confirmed `EUR 91.98` = quoted `€45.99 × 2`, `needs_review: none`; repeat → `ledger`, XCover not called; repeat with bypass → XCover `409`, `replayed true`, `treated_as_success true`, same booking, **same `x-idempotency-key` as the first call**.
 
 **Manual:** *(candidate to fill.)*
+
+## T6 — 2026-09-14 — Test Case 2 revisited: confirm silently not called (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T6.
+
+**What the guide's sentence means.** Create Offer is a quote; nothing binding exists after it. Confirm Offer is the sale: XCover *provisions* the product (issues the policy, creates the `…-INS` booking, generates the certificate) and *distributes confirmation* (emails the customer the policy documents — the partner doesn't). Collect payment, then confirm; if confirm never happens, **the customer has paid for a policy that does not exist.** Which is what the candidate observed.
+
+**Most likely trigger:** T5 made `policyholder.phone` required server-side; a browser still holding the pre-T5 `checkout.js` (no phone field) sent a confirm the server rejected with 400. Reproduced exactly that way.
+
+**The real bug — fixed:** `pay()` swallowed the failed confirm. The comment even said so ("RealCheap's problem to retry — the shopper is never blocked"). Fail-open was right; *silent* was wrong: the order was never flagged, the result page said "Order confirmed / no protection plan", nothing prompted a retry. Now:
+- A confirm the server rejects itself (400/409) is **recorded on the order** (`confirm_error`, history `confirm offer (rejected locally)`), not just returned. An XCover failure or timeout sets `confirm_error` too; a later success clears it.
+- The checkout tells the shopper ("Payment received. The protection plan could not be confirmed yet — it will be retried") before moving on.
+- The result page shows **"Order confirmed — protection plan pending"** with a *PENDING CONFIRMATION* card, the reason, and a real **Retry confirm now** button. The OMS pill shows *confirm failed* with the reason and a **Retry confirm** action.
+- `Cache-Control: no-store` on `/js` and `/css`, so a restarted server can no longer run against a cached front end. New invariant in `CLAUDE.md`: *fail open, never silent.*
+
+**Verified (script + browser):** stale-client confirm (no phone) → 400, `confirm_error` on the order, history `payment → confirm offer (rejected locally)`, OMS row *Paid · confirming / confirm failed / policyholder.phone is required* with Retry confirm; retry with phone → 200, booking, `confirm_error` cleared, OMS *Policy active*; `/js/checkout.js` served with `cache-control: no-store`.
+
+**Manual:** *(candidate to fill — this is the best "what did the agent get wrong" entry in the log: the agent wrote the silent path deliberately and commented it as a feature.)*

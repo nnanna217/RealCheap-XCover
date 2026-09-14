@@ -15,7 +15,7 @@ function render(o) {
   const q = b && b.quotes && b.quotes[0];
   const premium = o.protection === "accepted" && o.premium_unit ? o.premium_unit * o.quantity : 0;
   $("result").innerHTML = `
-    <h2>${o.refund ? "Order returned and refunded" : b && b.status === "CANCELLED" ? "Order confirmed — protection plan cancelled" : b ? "Order confirmed — your laptop is protected" : "Order confirmed"}</h2>
+    <h2>${o.refund ? "Order returned and refunded" : b && b.status === "CANCELLED" ? "Order confirmed — protection plan cancelled" : b ? "Order confirmed — your laptop is protected" : o.protection === "accepted" && o.payment ? "Order confirmed — protection plan pending" : "Order confirmed"}</h2>
     <p class="muted">Order ref <code>${o.transaction_id}</code> · ${o.payment ? `paid ${money(o.payment.amount, "USD")} (simulated)` : "unpaid"}</p>
 
     <table class="line-items">
@@ -45,6 +45,14 @@ function render(o) {
         <button type="button" id="retryBtn" class="btn-secondary">Demo: re-send the same confirm</button>
         <label class="small muted"><input type="checkbox" id="retryBypass"> bypass the ledger — let XCover answer</label>
         <span class="small muted" id="retryMsg">Simulates a retried request after a timeout. Unticked: the ledger answers, XCover is not called. Ticked: the same key reaches XCover, which replies 409 with the cached original — treated as success.</span>
+      </div>
+    </section>` : o.protection === "accepted" && o.payment ? `
+    <section class="policy-card pending">
+      <h3>Protection plan <span class="call-status warn">PENDING CONFIRMATION</span></h3>
+      <p>You paid for a protection plan but XCover has not confirmed it yet${o.confirm_error ? ` — <em>${o.confirm_error.error}</em>` : ""}. Nothing exists on XCover's side until Confirm Offer succeeds, so this is retried until it does.</p>
+      <div class="demo-tools">
+        <button type="button" id="confirmRetryBtn" class="buy-now-btn small-btn">Retry confirm now</button>
+        <span class="small muted" id="confirmRetryMsg"></span>
       </div>
     </section>` : o.protection === "declined" ? `<p class="muted">Protection plan declined.</p>` : `<p class="muted">No protection plan on this order.</p>`}
 
@@ -83,6 +91,16 @@ function render(o) {
 
   const entries = [...o.history].reverse().map((h) => ({ label: h.event, at: h.at, envelope: h.envelope, webhook: h.webhook, outcome: h.outcome }));
   renderIntegrationLog(entries, { badgeEl: $("modeBadge"), listEl: $("payloadEntries") });
+
+  const confirmRetry = $("confirmRetryBtn");
+  if (confirmRetry) confirmRetry.addEventListener("click", async () => {
+    confirmRetry.disabled = true; $("confirmRetryMsg").textContent = "Confirming…";
+    const ph = o.policyholder || { first_name: "Ada", last_name: "Lovelace", email: "ada@example.com", phone: "+1 555 010 0100", country: o.country || "US" };
+    const res = await fetch(`/api/orders/${encodeURIComponent(txn)}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: ph }) });
+    const r = await res.json();
+    if (r.order && r.order.booking_id) { render(r.order); return; }
+    $("confirmRetryMsg").textContent = r.error || "still not confirmed"; confirmRetry.disabled = false;
+  });
 
   const whBtn = $("whBtn");
   if (whBtn) whBtn.addEventListener("click", async () => {

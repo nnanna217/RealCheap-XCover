@@ -136,3 +136,4 @@ The payload panel shows the derived key on every confirm/cancel request so the p
 - The payload panel redacts `Authorization` and `X-Api-Key`, and always shows whether a response is `fixture` or `live`. Never let a cached or fixture response pass as live.
 - The confirm call fires only after payment succeeds — never before — and carries a derived `x-idempotency-key` (see Idempotency above).
 - Checkout completes even if XCover is unreachable (fail-open): the customer can buy the laptop without protection; they are never blocked by the insurance call.
+- **Fail open, never silent.** A paid-for plan whose confirm did not succeed is a liability (the customer paid; nothing exists on XCover's side until Confirm Offer succeeds). It is recorded on the order (`confirm_error`), shown as *pending confirmation* on the result page and *confirm failed* in the OMS, and retryable from both — never quietly dropped.

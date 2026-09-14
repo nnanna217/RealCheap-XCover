@@ -15,7 +15,8 @@ function pill(o) {
   const [label, cls] = STATUS[key] || [o.status, ""];
   const wh = o.booking && o.booking.last_webhook ? `<br><span class="small muted">via webhook ${o.booking.last_webhook.event}</span>` : "";
   const due = o.refund_due ? `<br><span class="call-status fail small">refund due ${money(o.refund_due.premium, o.refund_due.currency)}</span>` : "";
-  return `<span class="call-status ${cls}">${label}</span>${wh}${due}`;
+  const err = o.confirm_error && !o.booking_id ? `<br><span class="call-status fail small" title="${o.confirm_error.error}">confirm failed</span><br><span class="small muted">${o.confirm_error.error}</span>` : "";
+  return `<span class="call-status ${cls}">${label}</span>${wh}${due}${err}`;
 }
 
 function attempts(o) {
@@ -52,7 +53,7 @@ function actions(o) {
   return `<div class="actions">
     <a class="btn-secondary small-btn" href="/result.html?txn=${encodeURIComponent(o.transaction_id)}">View</a>
     ${btn("refund", o.refund ? "Refund again (demo)" : "Refund order", canRefund || !!o.refund, o.refund ? "btn-secondary" : "buy-now-btn")}
-    ${o.booking_id ? btn("confirm", "Re-send confirm (demo)", true) : ""}
+    ${o.booking_id ? btn("confirm", "Re-send confirm (demo)", true) : o.payment && o.protection === "accepted" ? btn("confirm", "Retry confirm", true, "buy-now-btn") : ""}
     <div class="small muted act-msg" id="msg-${o.transaction_id}"></div>
   </div>`;
 }
@@ -87,10 +88,10 @@ document.addEventListener("click", async (e) => {
   let body = { reason: "Product returned" };
   if (b.dataset.act === "confirm") {
     const o = await (await fetch(`/api/orders/${txn}`)).json();
-    body = { offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: o.policyholder || o.booking.policyholder };
+    body = { offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: o.policyholder || (o.booking && o.booking.policyholder) || { first_name: "Ada", last_name: "Lovelace", email: "ada@example.com", phone: "+1 555 010 0100", country: o.country || "US" } };
   }
   const r = await (await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
-  msg.innerHTML = r.served_from === "ledger" ? `<strong>served_from: ledger</strong> — ${r.note}` : r.error ? r.error : `served_from: xcover — ${r.cancelled ? "cancelled with XCover, one refund recorded" : "done"}`;
+  msg.innerHTML = r.served_from === "ledger" ? `<strong>served_from: ledger</strong> — ${r.note}` : r.error ? r.error : `served_from: xcover — ${r.cancelled ? "cancelled with XCover, one refund recorded" : r.order && r.order.booking_id ? `confirmed, booking ${r.order.booking_id}` : "done"}`;
   await load();
   const again = $(`msg-${txn}`); if (again) again.innerHTML = msg.innerHTML;
 });

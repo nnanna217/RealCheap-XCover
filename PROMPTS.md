@@ -97,3 +97,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T5 — 2026-09-14 — Test Case 2b: retry confirm
 
 > Pass. Ground this using the Confirm Offer guide. The confirm returned HTTP 200 — based on the documentation, shouldn't a conflict return HTTP 409 instead? The request body seems different from what is described; reconfirm the request and response fields expected.
+
+## T6 — 2026-09-14 — Test Case 2 revisited: confirm not called after payment
+
+> Something I missed in Test Case 2: after collection of payment, the Confirm endpoint was not called, and it does not show in the integration log either. Also, in the Confirm Offer guide, what does "You must make a request to the Confirm Offer endpoint to provision the product and distribute confirmation to the customer" mean?
