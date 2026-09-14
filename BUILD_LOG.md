@@ -289,3 +289,17 @@ The build is feature-complete against the brief's six considerations. This stage
 **Verified:** sleeve on a mobile UA from Canada → request shows the full documented shape (`device: "mobile"`, `merchant_id: REALCHEAP-ONLINE-CA`, `warranty{}`), XCover fixture still answers `422 offer_quote_generation_failed`.
 
 **Manual:** *(candidate to fill.)*
+
+## T2 — 2026-09-14 — Test Case 1b-i: offer generation (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T2.
+
+**Sorted:**
+- **One line item × 2 — by design (A3).** The retail schema has one `product` with a `quantity` field; the request carries `quantity: 2` and the plan is one line × 2. Whether XCover rates that as one policy or two is the open CSE question already recorded.
+- **Germany stayed USD — a fixture limitation that hid A5.** The product line is USD on purpose (list prices don't convert), but the *premium* should have come back in EUR and didn't, because there was one USD fixture. Added `offer-response.{CAD,GBP,EUR}.json` (same structure, placeholder amounts per currency; USD default). Germany now shows `€45.99 per item`, a `€91.98` premium line, and total `US$1,098.00 + €91.98` — two settlements, no invented FX rate, which is A5 demonstrated rather than papered over.
+- **"Three quotes in the log" — the log is on the checkout page**, not the OMS (which is one row per order, correctly). Not the tester's job to know that: the OMS Attempts column now shows `quote: 3 (XCover called 3; 2 earlier offers superseded)` and the ids column marks the offer id `(latest)`.
+- **The flicker — the ids were identical, and that was the wrong behaviour.** One fixture file → same offer and quote ids on every call. Live, every create-offer returns fresh ids, and the docs say never to cache offers. Fixture mode now mints fresh `id` / `products[].id` per call (`adaptFixture`, values only — structure stays the file's), and confirm/cancel fixtures echo the request's quote ids and `partner_transaction_id` the way the real replies do. Consequence worth saying in the room: **a re-quote is a new offer; confirm must send the latest offer/quote ids.** The ledger stores them on every re-quote, and a confirm with a stale offer id is refused (409).
+
+**Verified (script + browser):** three quotes under one order ref; offer id differs per quote; Germany premium `EUR €45.99` vs USD `$49.99`; ledger `quote_count 3, superseded 2`; confirm with the first (stale) offer id → 409, with the latest → booking whose quotes echo our quote id and whose `partner_transaction_id` is ours. Browser: Germany row `2 × €45.99 = €91.98`, total `US$1,098.00 + €91.98`, two log entries with different offer ids.
+
+**Manual:** *(candidate to fill.)*

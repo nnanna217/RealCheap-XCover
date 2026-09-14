@@ -22,6 +22,7 @@ function attempts(o) {
   const n = (re) => h.filter((e) => re.test(e.event)).length;
   const row = (label, total, xc) => total ? `<div>${label}: <strong>${total}</strong> <span class="muted small">(XCover called ${xc}, ledger ${total - xc})</span></div>` : "";
   return [
+    o.quote_count ? `<div>quote: <strong>${o.quote_count}</strong> <span class="muted small">(XCover called ${o.quote_count}${o.superseded_offer_ids && o.superseded_offer_ids.length ? `; ${o.superseded_offer_ids.length} earlier offer${o.superseded_offer_ids.length > 1 ? "s" : ""} superseded` : ""})</span></div>` : "",
     row("confirm", n(/^confirm offer/), n(/^confirm offer$/)),
     row("refund", n(/^refund/), n(/^refund \(simulated\)$/) ? h.filter((e) => /^cancel booking$/.test(e.event)).length : 0),
     row("opt-out", n(/^opt out/), n(/^opt out$/)),
@@ -41,7 +42,7 @@ function lineItems(o) {
 
 function ids(o) {
   const c = (v) => (v ? `<code title="${v}">${v.length > 14 ? v.slice(0, 8) + "…" + v.slice(-4) : v}</code>` : '<span class="muted">—</span>');
-  return `<div class="ids small"><div>offer ${c(o.offer_id)}</div><div>quote ${c(o.quote_ids && o.quote_ids[0])}</div><div>booking ${c(o.booking_id)}</div>${o.idempotency_key ? `<div>idem-key ${c(o.idempotency_key)}</div>` : ""}</div>`;
+  return `<div class="ids small"><div>offer ${c(o.offer_id)}${o.superseded_offer_ids && o.superseded_offer_ids.length ? ' <span class="muted">(latest)</span>' : ""}</div><div>quote ${c(o.quote_ids && o.quote_ids[0])}</div><div>booking ${c(o.booking_id)}</div>${o.idempotency_key ? `<div>idem-key ${c(o.idempotency_key)}</div>` : ""}</div>`;
 }
 
 function actions(o) {

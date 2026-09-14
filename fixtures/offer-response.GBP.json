@@ -1,0 +1,102 @@
+{
+  "_fixture": "GBP variant of offer-response.json — same structure, placeholder amounts in GBP so the country selector visibly changes the premium currency in fixture mode. Not Cover Genius pricing.",
+  "id": "0f6c1e2a-7b3d-4c8e-9a1f-2d5e6b7c8d90",
+  "offer_config_id": "6d7e8f90-1a2b-4c3d-8e4f-5a6b7c8d9e0f",
+  "offer_schema": "product_retail",
+  "currency": "GBP",
+  "products": [
+    {
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+      "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Protection Plan — 2 years accidental damage & extended warranty",
+      "type": "xcover-product",
+      "schema_url": "https://api.xcover-staging.com/xcover/partners/E3CCM/schemas/product_retail/",
+      "details": {
+        "policy_version_id": "pv-retail-protection-2026-01",
+        "start_date": "2026-09-13T00:00:00Z",
+        "end_date": "2028-09-13T00:00:00Z",
+        "finance": {
+          "price": {
+            "total_amount": 39.99,
+            "total_amount_without_tax": 33.33,
+            "total_amount_min": 39.99,
+            "total_amount_max": 39.99,
+            "total_amount_formatted": "£39.99",
+            "total_amount_without_tax_formatted": "£33.33",
+            "total_amount_min_formatted": "£39.99",
+            "total_amount_max_formatted": "£39.99"
+          },
+          "tax": {
+            "total_amount": 6.66,
+            "total_amount_formatted": "£6.66"
+          },
+          "surcharge": {
+            "total_amount": 0,
+            "total_amount_formatted": "£0.00"
+          },
+          "commission": {
+            "total_amount": 10,
+            "total_amount_formatted": "£10.00"
+          }
+        },
+        "pds_url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
+        "files": [
+          {
+            "name": "Policy Disclosure Statement",
+            "url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
+            "type": "pds"
+          }
+        ],
+        "extra_fields": {
+          "pricing_matrix": [],
+          "appliance": "laptop",
+          "retail_ex_tax": 33.33,
+          "retail_inc_tax": 39.99,
+          "retail_ex_tax_rounded": 33.33,
+          "retail_inc_tax_rounded": 39.99,
+          "taxes": {
+            "UK_IPT": 6.66
+          },
+          "tax_rate": 0.2,
+          "benefit_type": "accidental damage and extended warranty",
+          "partner_commission": 10,
+          "variant": "2y"
+        },
+        "experiment": {},
+        "benefits": [
+          {
+            "title": "Accidental damage",
+            "description": "Drops, spills and cracked screens"
+          },
+          {
+            "title": "Extended warranty",
+            "description": "Mechanical and electrical failure after the manufacturer warranty ends"
+          },
+          {
+            "title": "Repair or replace",
+            "description": "Repaired or replaced at no extra cost; claims paid via XClaim"
+          }
+        ]
+      }
+    }
+  ],
+  "content": {
+    "schema_version": "1",
+    "locale": "en-GB",
+    "slug": "retail-protection-offer",
+    "title": "Protect your purchase",
+    "extras": {},
+    "heading": "Protection Plan",
+    "sub_heading": "2 years of accidental damage and extended warranty cover",
+    "disclaimer": "Cover is provided by XCover and subject to the Policy Disclosure Statement.",
+    "disclaimer_html": "<p>Cover is provided by XCover and subject to the <a href=\"#\">Policy Disclosure Statement</a>.</p>",
+    "price_unit": "per item",
+    "description": "Repairs or replacement if your laptop is accidentally damaged or stops working after the manufacturer warranty ends.",
+    "positive_cta": "Yes, protect my laptop",
+    "negative_cta": "No thanks, I'll take the risk",
+    "negative_cta_warning": "Without protection, repair costs after the manufacturer warranty are yours.",
+    "required_message": "",
+    "credibility_message": "Trusted by 1,000+ shoppers this month"
+  },
+  "errors": {}
+}

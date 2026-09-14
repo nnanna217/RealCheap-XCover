@@ -81,3 +81,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 **Findings reported:** ledger empty on start — PASS · ineligible sleeve shows "XCover did not return a plan for this product" — PASS · fixture tag — PASS · panel shows request and HTTP 422 `validation_error` — PASS · **request body does not match the documented payload format** (product-retail create-offer page) — FAIL · response payload partially matches — PARTIAL · OMS shows the order with correct transaction id, Refund greyed out, XCover ids blank — PASS.
 
 > Ground the response payload using the error-versioning page. There seem to be separate 422 structures for Confirm Offer (`booking_quotes_unsuccessful`) and Create Offer (`offer_quote_generation_failed`). Explain which 422 approach you took and which best matches this eligibility case, then add it as an assumption.
+
+## T2 — 2026-09-14 — Test Case 1b-i: offer generation (laptop, qty, country)
+
+**Findings reported:** laptop qty 1 → plan shown with description, price, policies, CTAs — PASS; OMS shows Offer created, offer + quote ids, booking blank — PASS · qty 2 → plan, quantity and line items update; OMS quantity/amount correct; same order ref — PASS; **one line item, amount and quantity change in the UI** — flagged (\*\*\*) · **Germany → one line item, currency remains USD; if "three quotes in the log, same order ref" was the expectation — FAIL** · Continue greyed out until a decision — PASS · **unsure whether offer/quote ids are the same across quantity changes — the ids flicker but are masked.**

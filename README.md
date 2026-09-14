@@ -60,7 +60,7 @@ Claim status: the Offers API documents no claim event (claims are XClaim's surfa
 - `scripts/send-webhook.sh` — simulate a signed inbound webhook for an order
 - `public/` — catalog (`index.html`), product, checkout, result pages, and `orders.html` (the OMS view of the ledger: one row per order, plan as a line item, status lifecycle, attempts vs. XCover calls, Refund / re-send-confirm actions); plain HTML/JS, no build step
 - `public/js/products.js` — the three-SKU catalog, shared by browser and server
-- `fixtures/` — offer response used in fixture mode
+- `fixtures/` — recorded XCover replies used in fixture mode: offer responses per currency (`offer-response.<CUR>.json`), the documented 422 for an ineligible SKU, confirm (200 / 409 / 423), cancel preview and cancel, opt-out. Structure follows the specs; values are placeholders. In fixture mode the client mints fresh offer/quote ids per call and echoes request ids on confirm/cancel, as the real API does
 - `CLAUDE.md` — the guidelines the coding agent worked under, plus the brief's goals, the six technical considerations as verifiable goals, non-goals, invariants, and the idempotency rules
 - `PROMPTS.md` — every prompt given to the agent, verbatim, in order
 - `BUILD_LOG.md` — what each prompt produced, what was wrong, what was fixed by hand

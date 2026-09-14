@@ -87,8 +87,10 @@ app.post("/api/offers", async (req, res) => {
   // Eligibility is XCover's decision (their catalog classification), never this server's. In live mode the
   // request goes up regardless of category and XCover answers. In fixture mode the only thing we choose is
   // WHICH recorded answer stands in: an offer for electronics, the documented 422 for anything else.
-  const fixture = product.category.startsWith("electronics/") ? "offer-response.json" : "offer-response-ineligible.json";
-  const envelope = await xcover.call("POST", "offers/", offerRequest, fixture);
+  // Fixture file by category (eligibility stand-in) and by requested currency (offer-response.<CUR>.json, USD default);
+  // fresh offer/quote ids per call, as the real API returns.
+  const fixture = product.category.startsWith("electronics/") ? `offer-response.${currency}.json` : "offer-response-ineligible.json";
+  const envelope = await xcover.call("POST", "offers/", offerRequest, fixture, {}, { fallbackFile: "offer-response.json", freshIds: true });
 
   // Ledger: remember what was quoted for this order, so confirm can be checked against it.
   const offer = envelope.ok && envelope.response && Array.isArray(envelope.response.products) ? envelope.response : null;
@@ -96,6 +98,8 @@ app.post("/api/offers", async (req, res) => {
     sku: product.sku, product_name: product.name, unit_price: product.price, quantity, country, currency,
     offer_id: offer ? offer.id : null,
     quote_ids: offer ? offer.products.map((p) => p.id) : [],
+    quote_count: ((orders.get(txn) || {}).quote_count || 0) + 1,
+    superseded_offer_ids: (() => { const prev = orders.get(txn); return prev && prev.offer_id && offer && prev.offer_id !== offer.id ? [...(prev.superseded_offer_ids || []), prev.offer_id] : (prev && prev.superseded_offer_ids) || []; })(),
     offer_currency: offer ? offer.currency : null,
     premium_unit: offer ? offer.products[0].details.finance.price.total_amount : null,
     status: offer ? "quoted" : "no_offer",
@@ -150,7 +154,7 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   const attempts = [];
   let envelope;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key });
+    envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key }, { echoQuoteIds: true, echoTxn: txn });
     attempts.push({ attempt, status: envelope.status, elapsed_ms: envelope.elapsed_ms });
     if (envelope.status !== 423) break;
     await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
@@ -222,10 +226,10 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
   if (order.booking_id && order.status === "confirmed") {
     const body = { reason_for_cancellation: reason, quotes: order.quote_ids.map((id) => ({ id })) };
     // Guide: "always preview the cancellation to show the customer the refund amount before processing".
-    const preview = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: true }, "cancel-preview.json");
+    const preview = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: true }, "cancel-preview.json", {}, { echoQuoteIds: true });
     envelopes.push({ event: "cancel booking (preview)", envelope: preview });
     if (preview.ok) {
-      const cancel = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: false }, "cancel-response.json");
+      const cancel = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: false }, "cancel-response.json", {}, { echoQuoteIds: true });
       envelopes.push({ event: "cancel booking", envelope: cancel });
       if (cancel.ok) { cancelBody = cancel.response; premiumRefund = Number((cancelBody.refund && cancelBody.refund.amount) || 0); }
       else return res.status(cancel.status === 0 ? 502 : 200).json({ served_from: "xcover", cancelled: false, order, envelopes, error: "XCover did not cancel the booking; no refund issued — retry later" });
