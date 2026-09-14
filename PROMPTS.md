@@ -93,3 +93,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm
 
 > Pass.
+
+## T5 — 2026-09-14 — Test Case 2b: retry confirm
+
+> Pass. Ground this using the Confirm Offer guide. The confirm returned HTTP 200 — based on the documentation, shouldn't a conflict return HTTP 409 instead? The request body seems different from what is described; reconfirm the request and response fields expected.

@@ -124,13 +124,15 @@ app.get("/api/orders", (req, res) => res.json(orders.list()));
 //   simulate: "409" | "423" — fixture mode only; stands in for XCover's duplicate replies so rule 4 can be shown.
 app.post("/api/orders/:txn/confirm", async (req, res) => {
   const txn = req.params.txn;
-  const { offer_id, quote_ids = [], policyholder = {}, simulate } = req.body || {};
+  const { offer_id, quote_ids = [], policyholder = {}, simulate, force_xcover = false } = req.body || {};
   const order = orders.get(txn);
   if (!order) return res.status(404).json({ error: "unknown order", transaction_id: txn });
 
   // Rule 3 — the ledger is checked BEFORE XCover is called. A booking that already exists is returned as-is;
   // XCover is not contacted, so a retried confirm cannot issue a second policy even if the key were wrong.
-  if (order.booking_id) {
+  // `force_xcover` (fixture mode, demo only) skips this guard so the panel can see XCover's own 409 on a repeat.
+  const bypass = force_xcover && xcover.MODE === "fixture" && order.booking_id;
+  if (order.booking_id && !bypass) {
     const note = `Order ${txn} already has booking ${order.booking_id}; XCover was not called.`;
     const updated = orders.upsert(txn, {}, { event: "confirm offer (repeat)", status: 200, outcome: "served_from_ledger", note });
     return res.json({ served_from: "ledger", order: updated, envelope: null, note });
@@ -140,21 +142,31 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   if (order.offer_id !== offer_id || !quote_ids.length || !quote_ids.every((q) => order.quote_ids.includes(q))) {
     return res.status(409).json({ error: "offer/quotes do not match what was quoted for this order", order });
   }
-  for (const f of ["first_name", "last_name", "email", "country"]) {
+  // Confirm Offer guide: policyholder email, phone, first_name, last_name, country are required.
+  for (const f of ["first_name", "last_name", "email", "phone", "country"]) {
     if (!policyholder[f]) return res.status(400).json({ error: `policyholder.${f} is required` });
   }
 
   // Rule 2 — the key is derived from the natural key of this operation, never minted per attempt.
   const key = confirmKey(txn, offer_id, quote_ids);
-  const body = { quotes: quote_ids.map((id) => ({ id })), policyholder };
-  let fixture = simulate === "409" ? "confirm-response-409.json" : simulate === "423" ? "confirm-response-423.json" : "confirm-response.json";
+  // Request body per the Confirm Offer guide. partner_transaction_id here is what XCover echoes back on
+  // BOOKING_* webhooks (their examples show null because they never sent one) — it is how webhooks route to us.
+  const body = {
+    quotes: quote_ids.map((id) => ({ id })),
+    policyholder,
+    partner_transaction_id: txn,
+    payment_details: { provider: order.payment.provider, transaction_id: order.payment.id },
+  };
+  const sim = bypass ? "409" : simulate;
+  let fixture = sim === "409" ? "confirm-response-409.json" : sim === "423" ? "confirm-response-423.json" : "confirm-response.json";
 
   // Rule 4 — 409 = XCover already processed this key; the body is the cached original result → success.
   //          423 = still processing → back off and retry (3 attempts). Neither is surfaced as a failure.
   const attempts = [];
   let envelope;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key }, { echoQuoteIds: true, echoTxn: txn });
+    envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key },
+      { echoQuoteIds: true, echoTxn: txn, echoPrice: { currency: order.offer_currency || "USD", unit: order.premium_unit || 0, quantity: order.quantity || 1 } });
     attempts.push({ attempt, status: envelope.status, elapsed_ms: envelope.elapsed_ms });
     if (envelope.status !== 423) break;
     await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
@@ -162,19 +174,29 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   }
 
   const booking = envelope.status === 200 || envelope.status === 409 ? envelope.response : null;
+  // Post-response validations the guide asks the partner to perform:
+  //  - an `errors` object on a success "indicates an important logic error during booking that should be investigated";
+  //  - the confirmed price must match the price quoted at Create Offer.
+  const review = [];
+  if (booking && booking.errors && Object.keys(booking.errors).length) review.push({ code: "booking_errors_present", detail: booking.errors });
+  const quotedTotal = Number(((order.premium_unit || 0) * (order.quantity || 1)).toFixed(2));
+  if (booking && typeof booking.total_premium === "number" && Math.abs(booking.total_premium - quotedTotal) > 0.005)
+    review.push({ code: "price_mismatch", detail: `quoted ${order.offer_currency} ${quotedTotal}, confirmed ${booking.currency} ${booking.total_premium}` });
   const updated = orders.upsert(txn, {
     idempotency_key: key,
     policyholder,
     booking_id: booking ? booking.id : order.booking_id || null,
-    booking: booking || null,
+    booking: booking || order.booking || null,
     status: booking ? "confirmed" : order.status,
-  }, { event: "confirm offer", status: envelope.status, mode: envelope.mode, idempotency_key: key, attempts, envelope });
+    ...(review.length ? { needs_review: review } : {}),
+  }, { event: bypass ? "confirm offer (forced past ledger)" : "confirm offer", status: envelope.status, mode: envelope.mode, idempotency_key: key, attempts, envelope, ...(review.length ? { review } : {}) });
 
   res.status(envelope.status === 0 ? 502 : 200).json({
     served_from: "xcover",
     treated_as_success: !!booking,
     replayed: envelope.status === 409,
     attempts,
+    review,
     order: updated,
     envelope,
   });
@@ -302,7 +324,7 @@ app.post("/api/orders/:txn/pay", async (req, res) => {
   const premium = protection === "accepted" && order.premium_unit ? order.premium_unit * order.quantity : 0;
   const updated = orders.upsert(order.transaction_id, {
     protection: protection || "undecided",
-    payment: { status: "simulated_success", amount: order.unit_price * order.quantity + premium, at: new Date().toISOString() },
+    payment: { id: `PAY-${Date.now().toString(36).toUpperCase()}`, provider: "realcheap-psp (simulated)", status: "simulated_success", amount: order.unit_price * order.quantity + premium, at: new Date().toISOString() },
     status: protection === "accepted" ? "paid" : "paid_no_protection",
   }, { event: "payment (simulated)", status: 200 });
   res.json({ order: updated });

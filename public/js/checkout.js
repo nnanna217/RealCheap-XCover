@@ -189,9 +189,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Payment (simulated) → then, and only then, confirm the offer. Order of operations is the invariant.
 async function pay() {
-  const ph = { first_name: $("phFirst").value.trim(), last_name: $("phLast").value.trim(), email: $("phEmail").value.trim(), country: $("phCountry").value };
-  if (state.offer && state.protection === "accepted" && (!ph.first_name || !ph.last_name || !ph.email)) {
-    $("payMsg").textContent = "Policyholder name and email are required for the protection plan.";
+  const ph = { first_name: $("phFirst").value.trim(), last_name: $("phLast").value.trim(), email: $("phEmail").value.trim(), phone: $("phPhone").value.trim(), country: $("phCountry").value };
+  if (state.offer && state.protection === "accepted" && (!ph.first_name || !ph.last_name || !ph.email || !ph.phone)) {
+    $("payMsg").textContent = "Policyholder name, email and phone are required for the protection plan.";
     return;
   }
   $("payBtn").disabled = true; $("payMsg").textContent = "Processing payment…";

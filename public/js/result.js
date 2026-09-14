@@ -33,15 +33,18 @@ function render(o) {
         <dt>Booking</dt><dd><code>${b.id}</code></dd>
         <dt>Policy</dt><dd>${q && q.policy ? q.policy.policy_name : ""}</dd>
         <dt>Cover period</dt><dd>${q ? new Date(q.policy_start_date).toLocaleDateString() + " → " + new Date(q.policy_end_date).toLocaleDateString() : ""}</dd>
-        <dt>Policyholder</dt><dd>${b.policyholder.first_name} ${b.policyholder.last_name} · ${b.policyholder.email}</dd>
+        <dt>Policyholder</dt><dd>${b.policyholder.first_name} ${b.policyholder.last_name} · ${b.policyholder.email}${o.policyholder && o.policyholder.phone ? " · " + o.policyholder.phone : ""}</dd>
+        <dt>Partner ref</dt><dd><code>${b.partner_transaction_id || "—"}</code> <span class="small muted">(echoed by XCover; routes BOOKING_* webhooks)</span></dd>
         <dt>Premium</dt><dd>${b.total_premium_formatted} <span class="small muted">(tax ${b.total_tax_formatted})</span></dd>
         <dt>Documents</dt><dd><a href="${b.coi.url}" target="_blank" rel="noopener">Certificate of insurance</a> · <a href="${b.pds_url}" target="_blank" rel="noopener">PDS</a></dd>
         <dt>Claims</dt><dd><a href="${b.fnol_link}" target="_blank" rel="noopener">Make a claim</a> <span class="small muted">(first notice of loss — handled by XClaim)</span></dd>
         <dt>Idempotency key</dt><dd><code class="small">${o.idempotency_key}</code></dd>
       </dl>
+      ${o.needs_review ? `<p class="offer-warning"><strong>Needs review:</strong> ${o.needs_review.map((r) => `${r.code} — ${typeof r.detail === "string" ? r.detail : JSON.stringify(r.detail)}`).join("; ")}</p>` : ""}
       <div class="demo-tools">
         <button type="button" id="retryBtn" class="btn-secondary">Demo: re-send the same confirm</button>
-        <span class="small muted" id="retryMsg">Simulates a retried request after a timeout. The ledger answers; XCover is not called.</span>
+        <label class="small muted"><input type="checkbox" id="retryBypass"> bypass the ledger — let XCover answer</label>
+        <span class="small muted" id="retryMsg">Simulates a retried request after a timeout. Unticked: the ledger answers, XCover is not called. Ticked: the same key reaches XCover, which replies 409 with the cached original — treated as success.</span>
       </div>
     </section>` : o.protection === "declined" ? `<p class="muted">Protection plan declined.</p>` : `<p class="muted">No protection plan on this order.</p>`}
 
@@ -107,10 +110,13 @@ function render(o) {
     retry.disabled = true;
     const res = await fetch(`/api/orders/${encodeURIComponent(txn)}/confirm`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: b.policyholder }),
+      body: JSON.stringify({ offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: o.policyholder || b.policyholder, force_xcover: $("retryBypass").checked }),
     });
     const r = await res.json();
-    $("retryMsg").innerHTML = `<strong>served_from: ${r.served_from}</strong> — ${r.note || ""} Booking is still <code>${r.order.booking_id}</code>; still one policy.`;
+    $("retryMsg").innerHTML = r.served_from === "ledger"
+      ? `<strong>served_from: ledger</strong> — ${r.note || ""} Booking is still <code>${r.order.booking_id}</code>; still one policy.`
+      : `<strong>served_from: xcover — HTTP ${r.envelope.status}${r.replayed ? " (replay: cached original result, treated as success)" : ""}</strong>. Booking is still <code>${r.order.booking_id}</code>; still one policy. See the new entry in the integration log.`;
+    if (r.served_from !== "ledger") setTimeout(load, 800);
     retry.disabled = false;
   });
 }

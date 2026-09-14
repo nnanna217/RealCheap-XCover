@@ -319,3 +319,21 @@ The build is feature-complete against the brief's six considerations. This stage
 ## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm — PASS (no change)
 
 Candidate reports the accept → Continue → policyholder → Pay (simulated) → confirm → result page path passes end to end. Nothing changed. For the record, what this case exercises: payment recorded before confirm (server-enforced), derived `x-idempotency-key` visible in the Integration log, booking on the result page with cover period, COI / PDS / claim links, and the OMS row moving to "Policy active" with the booking id filled.
+
+## T5 — 2026-09-14 — Test Case 2b: retry confirm (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T5.
+
+**200 vs 409 — both are right, at different layers.** Two things guard a repeat confirm. The **ledger** (rule 3) answers first: the order already has a booking, so RealCheap returns it and never calls XCover — that is the 200 with `served_from: ledger` the candidate saw. **XCover** is the second line: if the call does go up, the guide says 409 "Offer already confirmed" (with the idempotency key, the cached original result), and the code treats that as success. The demo button could only ever show layer one, so the interesting half was invisible. Added a **"bypass the ledger — let XCover answer"** checkbox to the result-page demo (`force_xcover`, fixture mode only): the same derived key reaches XCover, which replies 409, and the booking is unchanged. `CLAUDE.md` rule 4 now states the layering explicitly.
+
+**Request body — the guide adds fields the retail OpenAPI spec didn't show; fixed:**
+- `policyholder.phone` — **required** in the guide (absent from the retail spec's required list). Added to the checkout form and validated server-side (400 without it).
+- `partner_transaction_id` — top-level, optional — **and it is the field XCover echoes back on `BOOKING_*` webhooks.** Their examples show `null` because they never sent one. Our webhook routing had been relying on a value we weren't populating; live, every webhook would have fallen back to booking-id routing. Now sent on every confirm; the result page shows it as "Partner ref (echoed by XCover; routes BOOKING_* webhooks)".
+- `payment_details { provider, transaction_id }` — optional; the simulated payment now carries an id (`PAY-…`) and provider, and both are sent.
+- `quotes[].insured / instalment_plan / first_instalment_paid`, `booking_agent` — optional, not applicable to a retail plan; omitted.
+
+**Response — two checks the guide asks the partner to perform, now performed:** (1) an `errors` object present on a success "indicates an important logic error during booking that should be investigated" → flagged `booking_errors_present`; (2) **price validation** — the confirmed `total_premium` must match the Create Offer price → flagged `price_mismatch` with both figures. Either sets `needs_review` on the order and a banner on the result page. To make (2) testable, confirm fixtures now echo the ledger's quoted currency and unit price × quantity (a real confirm returns the quoted price; a static file couldn't).
+
+**Verified:** no phone → 400; body keys `quotes, policyholder, partner_transaction_id, payment_details`, `partner_transaction_id` = our order ref, `payment_details.transaction_id = PAY-…`; Germany qty 2 → confirmed `EUR 91.98` = quoted `€45.99 × 2`, `needs_review: none`; repeat → `ledger`, XCover not called; repeat with bypass → XCover `409`, `replayed true`, `treated_as_success true`, same booking, **same `x-idempotency-key` as the first call**.
+
+**Manual:** *(candidate to fill.)*
