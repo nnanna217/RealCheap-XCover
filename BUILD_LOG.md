@@ -303,3 +303,15 @@ The build is feature-complete against the brief's six considerations. This stage
 **Verified (script + browser):** three quotes under one order ref; offer id differs per quote; Germany premium `EUR €45.99` vs USD `$49.99`; ledger `quote_count 3, superseded 2`; confirm with the first (stale) offer id → 409, with the latest → booking whose quotes echo our quote id and whose `partner_transaction_id` is ours. Browser: Germany row `2 × €45.99 = €91.98`, total `US$1,098.00 + €91.98`, two log entries with different offer ids.
 
 **Manual:** *(candidate to fill.)*
+
+## T3 — 2026-09-14 — Test Case 1b-ii: decline → opt-out (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T3.
+
+**204 / no body — correct.** That is the retail Opt-out Offer spec exactly (`POST /offers/{offer_id}/opt_out/`, no body, 204 No Content). Nothing to record beyond the status.
+
+**The flicker — real bug, fixed.** The OMS derived the plan line from `order.status`. Opt-out sets status `declined`; Pay then overwrites it with `paid_no_protection`; so after payment the row no longer matched "declined" and fell through to "undecided", and the 5-second auto-refresh showed both in turn. The decision is stored separately — `protection: "declined"` and the `opt_out` record — and the line now reads from those. The status pill also gains `Paid · plan declined` for that combination, instead of the ambiguous `Paid · no plan`. **Lesson:** status is a lifecycle position; the shopper's decision is a fact about the order — deriving one from the other is where the flicker came from.
+
+**Verified:** ledger after opt-out → `declined / protection declined / opt_out true`; after pay → `paid_no_protection / protection declined / opt_out true`; OMS row reads "Protection Plan — declined (opt-out sent)", pill "Paid · plan declined", Attempts `opt-out: 1 (XCover called 1, ledger 0)`; unchanged across an auto-refresh cycle.
+
+**Manual:** *(candidate to fill.)*

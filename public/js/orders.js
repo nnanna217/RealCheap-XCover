@@ -6,12 +6,13 @@ const money = (n, c) => new Intl.NumberFormat(undefined, { style: "currency", cu
 // Lifecycle labels, in the order the brief describes: offer created → confirmed → policy active → cancelled.
 const STATUS = {
   new: ["Started", ""], no_offer: ["No offer", ""], quoted: ["Offer created", "quoted"], declined: ["Offer declined", ""],
-  paid: ["Paid · confirming", "paid"], paid_no_protection: ["Paid · no plan", ""], confirmed: ["Policy active", "ok"],
+  paid: ["Paid · confirming", "paid"], paid_no_protection: ["Paid · no plan", ""], paid_declined: ["Paid · plan declined", ""], confirmed: ["Policy active", "ok"],
   cancelled: ["Cancelled", "fail"], refunded: ["Refunded · no plan", ""], unmatched_webhook: ["Unmatched webhook", "warn"],
 };
 
 function pill(o) {
-  const [label, cls] = STATUS[o.status] || [o.status, ""];
+  const key = o.status === "paid_no_protection" && (o.opt_out || o.protection === "declined") ? "paid_declined" : o.status;
+  const [label, cls] = STATUS[key] || [o.status, ""];
   const wh = o.booking && o.booking.last_webhook ? `<br><span class="small muted">via webhook ${o.booking.last_webhook.event}</span>` : "";
   const due = o.refund_due ? `<br><span class="call-status fail small">refund due ${money(o.refund_due.premium, o.refund_due.currency)}</span>` : "";
   return `<span class="call-status ${cls}">${label}</span>${wh}${due}`;
@@ -34,8 +35,8 @@ function lineItems(o) {
   let plan;
   if (o.premium_unit && (o.protection === "accepted" || o.booking_id)) {
     plan = `<div class="plan-line">Protection Plan <span class="muted">× ${o.quantity}</span><br><span class="small muted">Premium · XCover · ${money(o.premium_unit * o.quantity, o.offer_currency)}</span></div>`;
-  } else if (o.status === "declined") plan = `<div class="plan-line muted small">Protection Plan — declined (opt-out sent)</div>`;
-  else if (o.status === "no_offer") plan = `<div class="plan-line muted small">Protection Plan — not offered</div>`;
+  } else if (o.opt_out || o.protection === "declined") plan = `<div class="plan-line muted small">Protection Plan — declined${o.opt_out ? " (opt-out sent)" : ""}</div>`;
+  else if (o.status === "no_offer" || !o.offer_id) plan = `<div class="plan-line muted small">Protection Plan — not offered</div>`;
   else plan = `<div class="plan-line muted small">Protection Plan — undecided</div>`;
   return product + plan;
 }

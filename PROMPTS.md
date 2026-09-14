@@ -85,3 +85,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T2 — 2026-09-14 — Test Case 1b-i: offer generation (laptop, qty, country)
 
 **Findings reported:** laptop qty 1 → plan shown with description, price, policies, CTAs — PASS; OMS shows Offer created, offer + quote ids, booking blank — PASS · qty 2 → plan, quantity and line items update; OMS quantity/amount correct; same order ref — PASS; **one line item, amount and quantity change in the UI** — flagged (\*\*\*) · **Germany → one line item, currency remains USD; if "three quotes in the log, same order ref" was the expectation — FAIL** · Continue greyed out until a decision — PASS · **unsure whether offer/quote ids are the same across quantity changes — the ids flicker but are masked.**
+
+## T3 — 2026-09-14 — Test Case 1b-ii: decline → opt-out
+
+**Findings reported:** payment succeeded with the premium at 0.00 in the Order Summary — PASS · **OMS flickered between "Protection Plan — declined" and "— undecided"** — FAIL, fix · Integration log (result page) shows the opt-out call: `POST …/offers/{id}/opt_out/` → HTTP 204 No Content, request had no body — observed.
