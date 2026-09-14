@@ -15,7 +15,7 @@ function render(o) {
   const q = b && b.quotes && b.quotes[0];
   const premium = o.protection === "accepted" && o.premium_unit ? o.premium_unit * o.quantity : 0;
   $("result").innerHTML = `
-    <h2>${b ? "Order confirmed — your laptop is protected" : "Order confirmed"}</h2>
+    <h2>${o.refund ? "Order returned and refunded" : b ? "Order confirmed — your laptop is protected" : "Order confirmed"}</h2>
     <p class="muted">Order ref <code>${o.transaction_id}</code> · ${o.payment ? `paid ${money(o.payment.amount, "USD")} (simulated)` : "unpaid"}</p>
 
     <table class="line-items">
@@ -28,10 +28,10 @@ function render(o) {
 
     ${b ? `
     <section class="policy-card">
-      <h3>Protection plan <span class="call-status ok">${b.status}</span></h3>
+      <h3>Protection plan <span class="call-status ${b.status === "CANCELLED" ? "fail" : "ok"}">${b.status}</span></h3>
       <dl class="policy-facts">
         <dt>Booking</dt><dd><code>${b.id}</code></dd>
-        <dt>Policy</dt><dd>${q ? q.policy.policy_name : ""}</dd>
+        <dt>Policy</dt><dd>${q && q.policy ? q.policy.policy_name : ""}</dd>
         <dt>Cover period</dt><dd>${q ? new Date(q.policy_start_date).toLocaleDateString() + " → " + new Date(q.policy_end_date).toLocaleDateString() : ""}</dd>
         <dt>Policyholder</dt><dd>${b.policyholder.first_name} ${b.policyholder.last_name} · ${b.policyholder.email}</dd>
         <dt>Premium</dt><dd>${b.total_premium_formatted} <span class="small muted">(tax ${b.total_tax_formatted})</span></dd>
@@ -45,10 +45,33 @@ function render(o) {
       </div>
     </section>` : o.protection === "declined" ? `<p class="muted">Protection plan declined.</p>` : `<p class="muted">No protection plan on this order.</p>`}
 
+    ${o.payment ? `
+    <section class="refund-card">
+      <h3>Returns</h3>
+      ${o.refund ? `
+        <p><strong>Refunded ${o.refund.total_formatted}</strong> on ${new Date(o.refund.at).toLocaleString()} — product ${money(o.refund.product_amount, "USD")}${o.refund.premium_amount ? ` + premium ${money(o.refund.premium_amount, "USD")} (XCover-calculated${o.refund.xcover_cancellation && o.refund.xcover_cancellation.refund && o.refund.xcover_cancellation.refund.within_cooling_off_period ? ", within cooling-off" : ""})` : ""}. One refund, recorded once.</p>
+        ${b && b.status === "CANCELLED" ? `<p class="small muted">Booking <code>${b.id}</code> is CANCELLED with XCover.</p>` : ""}` : `
+        <p class="small muted">Returning the item refunds the product and, if a plan was bought, cancels it with XCover and refunds the premium XCover calculates — as one refund.</p>`}
+      <div class="demo-tools">
+        <button type="button" id="refundBtn" class="btn-secondary">${o.refund ? "Demo: re-send the same refund" : "Return item & refund"}</button>
+        <span class="small muted" id="refundMsg">${o.refund ? "Simulates a duplicate refund event (e.g. the OMS retries). The ledger answers; nothing is paid twice." : ""}</span>
+      </div>
+    </section>` : ""}
+
     <div class="result-actions"><a href="/" class="btn-secondary">Back to shop</a></div>`;
 
   const entries = [...o.history].reverse().map((h) => ({ label: h.event, at: h.at, envelope: h.envelope }));
   renderIntegrationLog(entries, { badgeEl: $("modeBadge"), listEl: $("payloadEntries") });
+
+  const refundBtn = $("refundBtn");
+  if (refundBtn) refundBtn.addEventListener("click", async () => {
+    refundBtn.disabled = true; $("refundMsg").textContent = "Processing return…";
+    const res = await fetch(`/api/orders/${encodeURIComponent(txn)}/refund`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Product returned" }) });
+    const r = await res.json();
+    if (r.served_from === "ledger") { $("refundMsg").innerHTML = `<strong>served_from: ledger</strong> — ${r.note}`; refundBtn.disabled = false; return; }
+    if (r.error) { $("refundMsg").textContent = r.error; refundBtn.disabled = false; return; }
+    render(r.order);
+  });
 
   const retry = $("retryBtn");
   if (retry) retry.addEventListener("click", async () => {

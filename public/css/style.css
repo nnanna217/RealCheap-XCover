@@ -571,3 +571,6 @@ footer {
 .call summary .idem code { color: #fbbf24; }
 .result-container { text-align: left; }
 .result-container > h2, .result-container > h2 + p { text-align: center; }
+
+.refund-card { margin-top: 16px; background: #fff7ed; border-radius: 10px; padding: 16px 20px; }
+.refund-card h3 { margin: 0 0 8px; }

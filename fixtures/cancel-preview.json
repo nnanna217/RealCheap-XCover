@@ -1,0 +1,24 @@
+{
+  "_fixture": "Preview (preview:true) — same refund calculation, booking NOT yet cancelled.",
+  "id": "8AMKH-KQ8NR-INS",
+  "status": "CONFIRMED",
+  "cancelled_at": null,
+  "currency": "USD",
+  "quotes": [
+    {
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+      "status": "CONFIRMED",
+      "price": 49.99,
+      "price_formatted": "$49.99"
+    }
+  ],
+  "refund": {
+    "amount": 49.99,
+    "amount_formatted": "$49.99",
+    "cancellation_fee": 0,
+    "cancellation_fee_formatted": "$0.00",
+    "pro_rata": false,
+    "within_cooling_off_period": true,
+    "note": "Full refund — cancellation within the cooling-off period. Partner processes the refund to the customer."
+  }
+}

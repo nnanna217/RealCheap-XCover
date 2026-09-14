@@ -193,3 +193,21 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Not done here:** rule 5 (cancel) and the opt-out call on decline — next.
 **Manual:** *(candidate to fill.)*
+
+## P8 — 2026-09-13 — Cancel path, consideration #4 / rule 5 (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P8.
+
+**Read the Cancel Booking guide first.** Two facts shaped the design: (1) *"XCover calculates the refund amount but does not process the payment. The partner must process refunds to the customer"* — so the duplicate-compensation risk in the brief is entirely RealCheap-side; (2) the cancel endpoint documents **no idempotency key** and is **irreversible**, with a `preview: true` step the guide says to always run first. `CLAUDE.md` rule 5 amended to say so: the ledger is the sole guard on cancel.
+
+**Built:** `POST /api/orders/:txn/refund` — RealCheap's return event. Order must have been paid (else 409). If already refunded → `served_from: "ledger"`, no XCover call, no second refund. Otherwise, if a booking exists: `bookings/{id}/cancel` with `preview: true`, then with `preview: false`, both envelopes logged; then **one** refund record — `product_amount + premium_amount` (premium from XCover's `refund.amount`) — written once. A paid order with no plan refunds the product only and never touches XCover. Result page: "Return item & refund" → cancelled state (booking `CANCELLED`, refund breakdown, "One refund, recorded once"); the button becomes "Demo: re-send the same refund" → ledger answer.
+
+**Fixtures:** `cancel-preview.json` / `cancel-response.json` hand-written from the guide's *prose* — that page has no response schema, so field names are the guide's terms arranged plausibly, and the file says so.
+
+**Found while verifying, fixed before commit:** after cancelling, I merged XCover's cancel reply over the stored booking; the cancel reply's slimmer `quotes[]` replaced the confirm reply's, dropping `policy`, and the result page threw. Now the cancellation is overlaid per quote by id; the page is also defensive on `q.policy`.
+
+**Honest wrinkle, not hidden:** with qty 2 the order paid `$1,197.98` but the fixture refunded `$1,147.99` — the fixture's cancel reply carries one quote at $49.99 and a fixture can't recompute. Live, XCover returns the real figure. It also re-opens **assumption 3** (one policy per unit vs. one policy for N units) as a genuine question for the panel — the confirm request sends one quote id regardless of quantity.
+
+**Verified (script + browser):** return → preview 200, cancel 200, refund `$398.99 = 349.00 + 49.99`, status `cancelled`, booking `CANCELLED`; duplicate return → `served_from: ledger`, zero XCover calls, log count unchanged; unpaid order → 409; paid-no-plan → product-only refund, zero XCover calls. History reads `create offer → payment → confirm offer → cancel booking (preview) → cancel booking → refund`.
+
+**Manual:** *(candidate to fill.)*

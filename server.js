@@ -150,6 +150,61 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   });
 });
 
+// POST /api/orders/:txn/refund — RealCheap refund event (a product return). Consideration #4.
+// XCover calculates the premium refund but never moves money; RealCheap refunds the customer. So the duplicate-
+// compensation risk is RealCheap's, and the guard is the ledger: cancel ONCE, refund ONCE, product + premium in a
+// single record. The cancel endpoint documents no idempotency key and is irreversible — rule 5 lives here.
+app.post("/api/orders/:txn/refund", async (req, res) => {
+  const txn = req.params.txn;
+  const { reason = "Product returned" } = req.body || {};
+  const order = orders.get(txn);
+  if (!order) return res.status(404).json({ error: "unknown order", transaction_id: txn });
+  if (!order.payment) return res.status(409).json({ error: "order was never paid; nothing to refund", order });
+
+  // Rule 5 — already refunded: answer from the ledger, call nothing, pay nothing again.
+  if (order.refund) {
+    return res.json({ served_from: "ledger", order, envelopes: [],
+      note: `Order ${txn} was already refunded ${order.refund.total_formatted} on ${order.refund.at}; XCover was not called and no second refund was issued.` });
+  }
+
+  const productRefund = order.unit_price * order.quantity;
+  const envelopes = [];
+  let premiumRefund = 0, cancelBody = null;
+
+  if (order.booking_id && order.status === "confirmed") {
+    const body = { reason_for_cancellation: reason, quotes: order.quote_ids.map((id) => ({ id })) };
+    // Guide: "always preview the cancellation to show the customer the refund amount before processing".
+    const preview = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: true }, "cancel-preview.json");
+    envelopes.push({ event: "cancel booking (preview)", envelope: preview });
+    if (preview.ok) {
+      const cancel = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: false }, "cancel-response.json");
+      envelopes.push({ event: "cancel booking", envelope: cancel });
+      if (cancel.ok) { cancelBody = cancel.response; premiumRefund = Number((cancelBody.refund && cancelBody.refund.amount) || 0); }
+      else return res.status(cancel.status === 0 ? 502 : 200).json({ served_from: "xcover", cancelled: false, order, envelopes, error: "XCover did not cancel the booking; no refund issued — retry later" });
+    } else {
+      return res.status(preview.status === 0 ? 502 : 200).json({ served_from: "xcover", cancelled: false, order, envelopes, error: "cancellation preview failed; no refund issued — retry later" });
+    }
+  }
+
+  // ONE refund record, product + premium, written once.
+  const refund = {
+    product_amount: productRefund, premium_amount: premiumRefund, total: productRefund + premiumRefund,
+    total_formatted: `$${(productRefund + premiumRefund).toFixed(2)}`, currency: "USD", reason, at: new Date().toISOString(),
+    xcover_cancellation: cancelBody ? { booking_id: cancelBody.id, status: cancelBody.status, cancelled_at: cancelBody.cancelled_at, refund: cancelBody.refund } : null,
+  };
+  let updated = order;
+  for (const e of envelopes) updated = orders.upsert(txn, {}, { event: e.event, status: e.envelope.status, mode: e.envelope.mode, envelope: e.envelope });
+  // Overlay the cancellation onto the stored booking per quote — the cancel reply is slimmer than the confirm reply,
+  // and replacing the quotes array wholesale would drop policy details the result page still shows.
+  const booking = cancelBody && order.booking ? {
+    ...order.booking, status: cancelBody.status, cancelled_at: cancelBody.cancelled_at,
+    quotes: (order.booking.quotes || []).map((q) => ({ ...q, ...((cancelBody.quotes || []).find((c) => c.id === q.id) || {}) })),
+  } : order.booking;
+  updated = orders.upsert(txn, { refund, booking, status: cancelBody ? "cancelled" : "refunded" },
+    { event: "refund (simulated)", status: 200, refund });
+  res.json({ served_from: "xcover", cancelled: !!cancelBody, order: updated, envelopes });
+});
+
 // POST /api/orders/:txn/pay — SIMULATED payment. RealCheap is merchant of record (XCover Single Payment):
 // the premium is a line item in RealCheap's own checkout, collected by RealCheap's PSP, which is out of scope here.
 app.post("/api/orders/:txn/pay", async (req, res) => {
