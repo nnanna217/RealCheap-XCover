@@ -15,3 +15,8 @@ Decisions raised during the build that are deliberately *not* being done yet, wi
 
 - **Orders view (`orders.html` + in-memory store).** Built 2026-09-13. Original note kept below for the reasoning.
 - *(original)* **Orders view (`orders.html` + in-memory store).** Raised after P3: the brief's tech stack is a proprietary OMS, and considerations #4 (cancellation → no duplicate compensation) and #6 (webhook claim status) currently have nowhere to *appear* except server logs. One page listing each order with its line items — product line, protection-plan line carrying the XCover offer / quote / booking ids — and a status that moves: offer created → confirmed → policy active → cancelled / claim status from the webhook. Home for the "Refund order" button. **Also the place idempotency becomes visible:** a `Map` keyed by `partner.transaction_id`, so a re-sent confirm returns the existing order rather than issuing a second policy. Not an OMS — a Map and a table. ~1 h.
+
+## Known limitations (pending live data)
+
+- **Only `products[0]` is rendered.** If `E3CCM` returns several plans in one offer (see `CLAUDE.md` A9 — e.g. 1y vs 2y, or accidental damage vs extended warranty as separate products), the checkout shows the first and confirms only that one. Next iteration: render one option per product with its own price and copy, let the shopper pick, and send the chosen quote id(s) to confirm. Surfaced during Test 1b-i (2026-09-14) from a reasonable misreading of "three quotes in the log" as three products in one response.
+- **Restart the server after pulling changes** — `npm start` does not watch files. Surfaced during testing when a stale process showed USD for Germany after the per-currency fixtures had landed.

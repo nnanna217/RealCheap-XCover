@@ -10,6 +10,8 @@ npm install
 npm start                # http://localhost:3000
 ```
 
+`npm start` does not watch for file changes — restart it after pulling.
+
 **No credentials needed to run it.** `XCOVER_MODE` defaults to `fixture`: every XCover call is built and signed exactly as it would be, but the response comes from `fixtures/offer-response.json` (hand-written from the retail Offers API schema) and the page labels it `fixture`.
 
 To hit the staging API, set in `.env`:
