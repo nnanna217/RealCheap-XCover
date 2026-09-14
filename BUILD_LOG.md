@@ -315,3 +315,7 @@ The build is feature-complete against the brief's six considerations. This stage
 **Verified:** ledger after opt-out → `declined / protection declined / opt_out true`; after pay → `paid_no_protection / protection declined / opt_out true`; OMS row reads "Protection Plan — declined (opt-out sent)", pill "Paid · plan declined", Attempts `opt-out: 1 (XCover called 1, ledger 0)`; unchanged across an auto-refresh cycle.
 
 **Manual:** *(candidate to fill.)*
+
+## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm — PASS (no change)
+
+Candidate reports the accept → Continue → policyholder → Pay (simulated) → confirm → result page path passes end to end. Nothing changed. For the record, what this case exercises: payment recorded before confirm (server-enforced), derived `x-idempotency-key` visible in the Integration log, booking on the result page with cover period, COI / PDS / claim links, and the OMS row moving to "Policy active" with the booking id filled.

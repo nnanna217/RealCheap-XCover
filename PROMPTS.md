@@ -89,3 +89,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T3 — 2026-09-14 — Test Case 1b-ii: decline → opt-out
 
 **Findings reported:** payment succeeded with the premium at 0.00 in the Order Summary — PASS · **OMS flickered between "Protection Plan — declined" and "— undecided"** — FAIL, fix · Integration log (result page) shows the opt-out call: `POST …/offers/{id}/opt_out/` → HTTP 204 No Content, request had no body — observed.
+
+## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm
+
+> Pass.
