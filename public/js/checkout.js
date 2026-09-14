@@ -13,6 +13,7 @@ const state = {
   envelope: null,      // most recent request/response envelope
   calls: [],           // every envelope this page produced, for the integration log
   protection: "undecided", // undecided | accepted | declined
+  noOfferReason: null, // null | "ineligible" (XCover answered no) | "unavailable" (XCover unreachable)
   quoting: false,      // true while a create-offer call is in flight
 };
 
@@ -54,6 +55,11 @@ async function quote() {
 
   const products = envelope.ok && envelope.response && Array.isArray(envelope.response.products) ? envelope.response.products : [];
   state.offer = products.length ? envelope.response : null;
+  // Why there is no offer matters: "XCover said no" (a 4xx answer) is eligibility; "XCover didn't answer"
+  // (timeout / network / 5xx) is an outage we fail open on. Both let the shopper continue; the message differs.
+  state.noOfferReason = state.offer ? null
+    : envelope.status >= 400 && envelope.status < 500 ? "ineligible"
+    : "unavailable";
   state.quoting = false;
   render();
 }
@@ -108,7 +114,9 @@ function renderOffer() {
     return;
   }
   if (!state.offer) {
-    el.innerHTML = '<p class="muted">No protection plan is available for this item.</p>';
+    el.innerHTML = state.noOfferReason === "ineligible"
+      ? '<h2>Protection Plan</h2><p class="muted">Not available for this item.</p><p class="small muted">XCover did not return a plan for this product.</p>'
+      : '<h2>Protection Plan</h2><p class="muted">Protection is temporarily unavailable.</p><p class="small muted">You can still complete your purchase without it.</p>';
     return;
   }
   const { content = {}, products } = state.offer;
@@ -162,6 +170,8 @@ function render() {
       : `${money(itemTotal, "USD")} + ${money(protectionTotal, offerCurrency)}`;
   } else if (state.offer && state.protection === "declined") {
     rows.push({ item: "Protection Plan", meta: "Declined", qty: "—", unit: "—", total: money(0, "USD"), muted: true });
+  } else if (!state.quoting && state.noOfferReason) {
+    rows.push({ item: "Protection Plan", meta: state.noOfferReason === "ineligible" ? "Not available for this item" : "Temporarily unavailable", qty: "—", unit: "—", total: money(0, "USD"), muted: true });
   }
 
   $("lineItemsBody").innerHTML = rows.map((r) => `

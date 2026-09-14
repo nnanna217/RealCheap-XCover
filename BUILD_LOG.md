@@ -159,3 +159,19 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Changed:** buttons are a single flex row, equal width (`flex: 1 1 0; min-width: 0`), text allowed to wrap inside them; they stack only under 480px. Badge is absolutely positioned straddling the card's top border, so it no longer occupies a line.
 **First attempt was wrong:** I kept `white-space: nowrap` on the buttons, and the API's own CTA copy ("No thanks, I'll take the risk") is wider than half the column at 40% — so the row still wrapped. The copy comes from XCover, not from us, so the buttons have to accommodate whatever length it is; letting the text wrap was the fix, not shortening it.
 **Verified in a browser:** desktop — same top, same height, 157px each; badge straddles the border; 375px mobile — stacked.
+
+## P6 — 2026-09-13 — Eligibility, consideration #1 (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P6. **Candidate's catch:** P3 deferred eligibility to "Block 2" and nothing picked it up — the sleeve quoted a $49.99 plan. Reproduced with curl before touching anything (`RC-SL-004 → 200, products: 1`).
+
+**Design decision — who decides eligibility.** In live mode, XCover. The request goes up for every SKU and XCover's catalog classification answers; this server never filters by category, because that would be RealCheap re-implementing the thing Cover Genius sells. In fixture mode something must stand in for that answer, so the only rule here is *which recorded reply* to return: `offer-response.json` for `electronics/*`, `offer-response-ineligible.json` for everything else. The rule is in one line, commented as a stand-in.
+
+**The ineligible fixture is the documented 422**, copied from the Create Offer guide's error example: `code: offer_quote_generation_failed`, per-product `offer_quote_pricing_error` / "No rate available for the supplied parameters". A fixture may now carry `_status`, and the client honours it (`ok` = status < 400).
+
+**Our own status vs XCover's.** `/api/offers` previously returned 502 whenever `ok` was false — which would have turned an eligibility "no" into a gateway error. Now: XCover answered (any status) → 200 with the envelope; XCover unreachable → 502. The envelope carries XCover's real status.
+
+**Three outcomes on the page, not two.** `noOfferReason` distinguishes *ineligible* (a 4xx answer — "Not available for this item · XCover did not return a plan for this product") from *unavailable* (timeout / network / 5xx — "Protection is temporarily unavailable · You can still complete your purchase without it"). Both enable Continue; the line-items table shows a $0.00 row with the reason. This also closes the message half of P7 (fail-open) — the timeout tuning remains.
+
+**Verified in a browser:** sleeve → integration log `HTTP 422`, offer column "Not available for this item", table row "Protection Plan — Not available for this item — $0.00", total $4.00, Continue enabled. Laptop → offer as before. Live mode against blocked staging → "temporarily unavailable" wording, row "Temporarily unavailable", Continue enabled, log `error · timeout`.
+
+**Manual:** *(candidate to fill — the catch itself was the manual intervention.)*

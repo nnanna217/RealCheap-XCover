@@ -59,8 +59,13 @@ app.post("/api/offers", async (req, res) => {
     partner: { transaction_id: txn },
   };
 
-  const envelope = await xcover.call("POST", "offers/", offerRequest, "offer-response.json");
-  res.status(envelope.ok ? 200 : 502).json({ ...envelope, transaction_id: txn });
+  // Eligibility is XCover's decision (their catalog classification), never this server's. In live mode the
+  // request goes up regardless of category and XCover answers. In fixture mode the only thing we choose is
+  // WHICH recorded answer stands in: an offer for electronics, the documented 422 for anything else.
+  const fixture = product.category.startsWith("electronics/") ? "offer-response.json" : "offer-response-ineligible.json";
+  const envelope = await xcover.call("POST", "offers/", offerRequest, fixture);
+  // Our own status reflects reachability only: XCover answered (any status) → 200 with the envelope; unreachable → 502.
+  res.status(envelope.status === 0 ? 502 : 200).json({ ...envelope, transaction_id: txn });
 });
 
 // POST /api/webhooks - XCover webhook endpoint

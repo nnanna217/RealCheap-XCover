@@ -39,3 +39,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P5d — 2026-09-13 — Offer buttons and badge
 
 > The Yes and No buttons are not aligned — make both adjust to the same row, and make it responsive. The Recommended badge is taking real estate that pushes the screen down — make it exist on the border of the Protection Plan layout.
+
+## P6 — 2026-09-13 — Eligibility (consideration #1)
+
+> It seems #1 SKU / category eligibility has not been done correctly or built. Reverify the sleeve SKU → no offer. It seems this was not handled gracefully, as this product item still generates a quote.

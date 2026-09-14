@@ -1,0 +1,17 @@
+{
+  "_fixture": "Hand-written 2026-09-13 from the documented 422 example in the Create Offer guide (partner-docs.covergenius.com/offers/guides/purchase-workflow-overview/create-offer, 'Error Responses'). This is what XCover returns when no product can be rated for the request — e.g. a SKU/category outside the partner's eligible set. Ids are placeholders.",
+  "_status": 422,
+  "type": "validation_error",
+  "message": "Offer could not be created due to quote generation errors",
+  "code": "offer_quote_generation_failed",
+  "error_id": "b9c1f0d2-3a4e-4c6b-9f21-7d8e5a0b1c34",
+  "errors": [
+    {
+      "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "quote_id": "3c7d9e21-5b48-4f0a-8d16-2a9c4e7b0f53",
+      "code": "offer_quote_pricing_error",
+      "details": ["No rate available for the supplied parameters"]
+    }
+  ],
+  "metadata": { "selected_offer_id": "5d8a2f61-9c04-4e73-b1a8-3f6e7c0d9b42" }
+}
