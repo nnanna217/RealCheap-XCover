@@ -152,3 +152,10 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 ## P5c — 2026-09-13 — 60/40 columns (agent: Claude Code)
 
 **Asked:** see `PROMPTS.md` P5c. **Changed:** `3fr 1fr` → `3fr 2fr`, one line. **Verified:** measured 60% / 40% at 1024px; both columns still share a bottom edge (942). The offer column's stacked buttons and benefit list now have room; the line-items table wraps the product name at this width, which reads fine.
+
+## P5d — 2026-09-13 — Offer buttons and badge (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P5d.
+**Changed:** buttons are a single flex row, equal width (`flex: 1 1 0; min-width: 0`), text allowed to wrap inside them; they stack only under 480px. Badge is absolutely positioned straddling the card's top border, so it no longer occupies a line.
+**First attempt was wrong:** I kept `white-space: nowrap` on the buttons, and the API's own CTA copy ("No thanks, I'll take the risk") is wider than half the column at 40% — so the row still wrapped. The copy comes from XCover, not from us, so the buttons have to accommodate whatever length it is; letting the text wrap was the fix, not shortening it.
+**Verified in a browser:** desktop — same top, same height, 157px each; badge straddles the border; 375px mobile — stacked.

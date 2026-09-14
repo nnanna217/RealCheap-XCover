@@ -540,3 +540,15 @@ footer {
 .checkout-container .order-summary { height: auto; }
 .checkout-container .payment-container { display: flex; flex-direction: column; }
 .checkout-container .payment-container .offer { flex: 1; }
+
+/* Offer buttons: one row, equal width; stack only when the column is too narrow to hold both */
+.offer-actions { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+.offer-actions .buy-now-btn, .offer-actions .btn-secondary { flex: 1 1 140px; width: auto; padding: 10px 8px; font-size: 0.85rem; white-space: nowrap; }
+
+/* Recommended badge sits on the card's top border instead of taking a line inside it */
+.offer { overflow: visible; margin-top: 10px; }
+.offer .badge { position: absolute; top: -10px; left: 16px; }
+.offer h2 { margin-top: 4px; }
+.offer-actions { flex-wrap: nowrap; align-items: stretch; }
+.offer-actions .buy-now-btn, .offer-actions .btn-secondary { flex: 1 1 0; min-width: 0; white-space: normal; line-height: 1.25; }
+@media (max-width: 480px) { .offer-actions { flex-wrap: wrap; } .offer-actions .buy-now-btn, .offer-actions .btn-secondary { flex-basis: 100%; } }

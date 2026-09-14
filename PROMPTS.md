@@ -35,3 +35,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P5c — 2026-09-13 — 60/40 columns
 
 > Modify the frontend again. Instead of 75%–25% for the Order Summary to Protection Plan, do 60%–40% instead.
+
+## P5d — 2026-09-13 — Offer buttons and badge
+
+> The Yes and No buttons are not aligned — make both adjust to the same row, and make it responsive. The Recommended badge is taking real estate that pushes the screen down — make it exist on the border of the Protection Plan layout.
