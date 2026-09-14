@@ -141,3 +141,10 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified in a browser:** fixture mode → badge `FIXTURE` (amber), entry `create offer · POST /xcover/partners/E3CCM/offers/ · HTTP 200 · 0 ms · fixture`, request headers show `X-Api-Key: "***"`, `Authorization: "***"`, request body and fixture response side by side, response column inside the panel bounds. Live mode against the still-blocked staging → badge `LIVE` (green), entry shows `error · timeout after 3000ms · 3003 ms`, offer column resolves, Continue enabled.
 
 **Manual:** *(candidate to fill.)*
+
+## P5b — 2026-09-13 — Equal-height columns (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P5b.
+**Changed:** four CSS lines. The order summary had `height: fit-content` from the original template, which opted it out of the grid's default stretch; removed for the checkout grid, and the offer column made a flex column so the offer card fills to the shared bottom edge.
+**Verified in a browser:** both columns top 246 / bottom 1201 at 1024px.
+**Manual:** *(candidate to fill.)*

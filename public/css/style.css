@@ -534,3 +534,9 @@ footer {
 .call-body pre { background: #111116; border-radius: 8px; padding: 12px; font-size: 0.75rem; line-height: 1.4; overflow-x: auto; max-height: 420px; margin: 0 0 10px; color: #d4d4d4; }
 @media (max-width: 768px) { .call-body { grid-template-columns: 1fr; } }
 .call-body > div { min-width: 0; }
+
+/* Both checkout columns share one row and one baseline: let the grid stretch them to equal height */
+.checkout-container { align-items: stretch; }
+.checkout-container .order-summary { height: auto; }
+.checkout-container .payment-container { display: flex; flex-direction: column; }
+.checkout-container .payment-container .offer { flex: 1; }

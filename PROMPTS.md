@@ -27,3 +27,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P5 — 2026-09-13 — Payload panel
 
 > Proceed with P5 — Payload panel. *(From the plan: below the checkout, a collapsible panel showing the exact request sent and response received as pretty JSON, with `Authorization` / `X-Api-Key` redacted to `***`, and a badge reading `fixture` or `live`. Verify: the badge matches `XCOVER_MODE`.)*
+
+## P5b — 2026-09-13 — Equal-height columns
+
+> Modify the front end again. I want the base of the Order Summary and the Protection Plan to always be the same, so that they are both in the same row.
