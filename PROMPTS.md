@@ -2,6 +2,12 @@
 
 Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LOG.md` (what happened) — this file is only *what was asked*. Entry numbers match between the two files.
 
+Stages are separated by `==================` lines. Entry numbers stay unique across stages (P-numbers for the build, T-numbers for testing) and match `BUILD_LOG.md`.
+
+==================
+# Stage 1 — Build prompts (2026-09-12 → 2026-09-13)
+==================
+
 ## P1 — 2026-09-13 — Strip Adyen
 
 > Remove @adyen/api-library and the Drop-in session flow from server.js and public/js/checkout.js. Keep the Express setup, static serving, and the /api/webhooks HMAC handler. Verify: npm start boots, / serves, no adyen string remains in git grep.
@@ -63,3 +69,10 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P11 — 2026-09-13 — Orders view (P8 in the plan)
 
 > Proceed with the Orders view (`orders.html` + in-memory store) — a Map and a table. The brief's tech stack is a proprietary OMS, and considerations #4 and #6 currently have nowhere to appear except server logs. One page listing each order with its line items (product line, protection-plan line carrying the XCover offer / quote / booking ids) and a status that moves: offer created → confirmed → policy active → cancelled / claim status from the webhook. Home for the "Refund order" button. Also where idempotency becomes visible: a Map keyed by partner.transaction_id, so a re-sent confirm returns the existing order rather than issuing a second policy.
+
+==================
+# Stage 2 — Testing prompts (from 2026-09-14)
+==================
+
+Prompts the candidate gives after exercising the whole system end to end. Each is logged verbatim as `T<n>`, with the finding that prompted it, and answered in `BUILD_LOG.md` under the same number.
+

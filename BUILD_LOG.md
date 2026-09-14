@@ -2,6 +2,12 @@
 
 Chronological record of how this prototype was built with an LLM coding harness (Claude Code), kept as it happened. Each entry: what was asked, what came back, what was wrong, what was changed by hand.
 
+Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stage 1 entries answer P-prompts, Stage 2 entries answer T-prompts.
+
+==================
+# Stage 1 — Build (2026-09-12 → 2026-09-13)
+==================
+
 ## 2026-09-12 — Scaffold
 
 - Copied a prior Adyen payments checkout demo (Express + plain HTML/JS: product → checkout → result, server-side API proxy, HMAC-verified webhook handler) into a fresh repo. No Adyen code removed yet — the first commit is the honest starting point so the Adyen → XCover swap is visible in the diffs.
@@ -261,3 +267,12 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified in a browser:** six seeded orders render in five distinct states including one moved by webhook; on a paid+confirmed order, Re-send confirm → *served_from: ledger*, attempts `2 (XCover 1, ledger 1)`; Refund → cancelled with XCover, one refund, status Cancelled; Refund again → *served_from: ledger*, `refund: 2 (XCover 1, ledger 1)`; unmatched booking listed in the reconciliation section; unpaid confirm → 409.
 
 **Manual:** *(candidate to fill.)*
+
+==================
+# Stage 2 — Testing (from 2026-09-14)
+==================
+
+The build is feature-complete against the brief's six considerations. This stage records what end-to-end testing found, what was changed in response, and what was deliberately left alone. Same format as Stage 1: asked → assumptions → changed → verified → manual.
+
+**Stage 1 exit state (commit `fb0fc89`, 24 commits):** catalog · checkout with quote / opt-in / decline / quantity / country · eligibility (fixture 422) · payload panel → integration log · simulated payment · confirm with derived `x-idempotency-key`, ledger, 409/423 handling · opt-out · cancel with preview + single refund record · `BOOKING_*` webhooks with signed simulator · orders view. Build time ≈ 12 h.
+
