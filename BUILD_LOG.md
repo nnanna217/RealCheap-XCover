@@ -148,3 +148,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Changed:** four CSS lines. The order summary had `height: fit-content` from the original template, which opted it out of the grid's default stretch; removed for the checkout grid, and the offer column made a flex column so the offer card fills to the shared bottom edge.
 **Verified in a browser:** both columns top 246 / bottom 1201 at 1024px.
 **Manual:** *(candidate to fill.)*
+
+## P5c — 2026-09-13 — 60/40 columns (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P5c. **Changed:** `3fr 1fr` → `3fr 2fr`, one line. **Verified:** measured 60% / 40% at 1024px; both columns still share a bottom edge (942). The offer column's stacked buttons and benefit list now have room; the line-items table wraps the product name at this width, which reads fine.

@@ -31,3 +31,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P5b — 2026-09-13 — Equal-height columns
 
 > Modify the front end again. I want the base of the Order Summary and the Protection Plan to always be the same, so that they are both in the same row.
+
+## P5c — 2026-09-13 — 60/40 columns
+
+> Modify the frontend again. Instead of 75%–25% for the Order Summary to Protection Plan, do 60%–40% instead.

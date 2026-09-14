@@ -490,8 +490,8 @@ footer {
 .small { font-size: 0.8rem; }
 #continueBtn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-/* Checkout layout: order summary 3/4, protection plan 1/4 */
-.checkout-container { grid-template-columns: 3fr 1fr; gap: 2rem; }
+/* Checkout layout: order summary 60%, protection plan 40% */
+.checkout-container { grid-template-columns: 3fr 2fr; gap: 2rem; }
 .line-items { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.95rem; }
 .line-items th, .line-items td { padding: 10px 8px; border-bottom: 1px solid #e0e0e0; text-align: left; vertical-align: top; }
 .line-items th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }
