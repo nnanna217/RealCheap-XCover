@@ -150,6 +150,23 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   });
 });
 
+// POST /api/orders/:txn/opt-out — the shopper declined the offer. XCover records it for conversion tracking
+// (204 No Content). Fired when the decision is frozen (Continue to payment), not on the click — a shopper
+// can change their mind. Idempotent via the ledger; a repeat is answered without a call.
+app.post("/api/orders/:txn/opt-out", async (req, res) => {
+  const txn = req.params.txn;
+  const order = orders.get(txn);
+  if (!order) return res.status(404).json({ error: "unknown order", transaction_id: txn });
+  if (!order.offer_id) return res.status(409).json({ error: "no offer was made on this order; nothing to opt out of", order });
+  if (order.booking_id) return res.status(409).json({ error: "offer was confirmed; opt-out no longer applies", order });
+  if (order.opt_out) return res.json({ served_from: "ledger", order, envelope: null, note: `Opt-out for ${txn} already recorded at ${order.opt_out.at}; XCover was not called.` });
+
+  const envelope = await xcover.call("POST", `offers/${order.offer_id}/opt_out/`, null, "opt-out-response.json");
+  const updated = orders.upsert(txn, envelope.ok ? { opt_out: { at: new Date().toISOString() }, protection: "declined", status: "declined" } : {},
+    { event: "opt out", status: envelope.status, mode: envelope.mode, envelope });
+  res.status(envelope.status === 0 ? 502 : 200).json({ served_from: "xcover", recorded: envelope.ok, order: updated, envelope });
+});
+
 // POST /api/orders/:txn/refund — RealCheap refund event (a product return). Consideration #4.
 // XCover calculates the premium refund but never moves money; RealCheap refunds the customer. So the duplicate-
 // compensation risk is RealCheap's, and the guard is the ledger: cancel ONCE, refund ONCE, product + premium in a

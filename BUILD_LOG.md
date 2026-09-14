@@ -211,3 +211,15 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified (script + browser):** return → preview 200, cancel 200, refund `$398.99 = 349.00 + 49.99`, status `cancelled`, booking `CANCELLED`; duplicate return → `served_from: ledger`, zero XCover calls, log count unchanged; unpaid order → 409; paid-no-plan → product-only refund, zero XCover calls. History reads `create offer → payment → confirm offer → cancel booking (preview) → cancel booking → refund`.
 
 **Manual:** *(candidate to fill.)*
+
+## P9 — 2026-09-13 — Opt-out on decline (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` P9.
+
+**Spec (retail Opt-out Offer):** `POST /offers/{offer_id}/opt_out/`, no body, **204 No Content**. Exists so XCover can track conversion; most integrations skip it.
+
+**Design decision — when is a decline final?** Not on the click: the shopper can flip back to "Yes" before paying. The call fires when the decision is frozen — at Continue to payment, where the cart locks. An abandoned checkout sends nothing (abandonment ≠ decline). Idempotent via the ledger: a repeat is answered without a call; an order with no offer (ineligible) or an already-confirmed offer refuses with 409.
+
+**Verified (script + browser):** opt-out → `204`, status `declined`; repeat → `served_from: ledger`; ineligible order → 409. Browser: decline → Continue → integration log shows `opt out … HTTP 204` beneath the create-offer entry; Pay button reads `$549.00`; table row "Protection Plan — Declined — $0.00". The panel now prints "(no body)" / "(204 No Content)" instead of `null` for body-less calls.
+
+**Manual:** *(candidate to fill.)*

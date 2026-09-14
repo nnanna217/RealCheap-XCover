@@ -28,11 +28,11 @@ function renderIntegrationLog(entries, { badgeEl, listEl }) {
         <div>
           <h4>Request</h4>
           <pre>${pretty({ url: e.request.url, headers: e.request.headers })}</pre>
-          <pre>${pretty(e.request.body)}</pre>
+          ${e.request.body ? `<pre>${pretty(e.request.body)}</pre>` : '<pre>(no body)</pre>'}
         </div>
         <div>
           <h4>Response ${e.mode === "fixture" ? '<span class="small muted">(fixture — not from XCover)</span>' : ""}</h4>
-          <pre>${pretty(e.error ? { error: e.error } : e.response)}</pre>
+          <pre>${e.error ? pretty({ error: e.error }) : e.status === 204 ? "(204 No Content)" : pretty(e.response)}</pre>
         </div>
       </div>
     </details>`;

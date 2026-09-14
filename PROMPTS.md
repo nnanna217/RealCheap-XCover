@@ -51,3 +51,7 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 ## P8 — 2026-09-13 — Cancel path (consideration #4, idempotency rule 5)
 
 > Yes, proceed with cancel i.e. the Cancel path.
+
+## P9 — 2026-09-13 — Opt-out on decline
+
+> Proceed with opt-out on decline.

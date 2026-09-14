@@ -169,11 +169,18 @@ document.addEventListener("DOMContentLoaded", () => {
   $("country").addEventListener("change", (e) => { state.country = e.target.value; quote(); });
 
   // Continue → payment step. The cart is frozen from here; changing it means a new quote.
-  $("continueBtn").addEventListener("click", () => {
+  $("continueBtn").addEventListener("click", async () => {
     $("qty").disabled = true; $("country").disabled = true; $("continueBtn").hidden = true;
     $("phCountry").value = state.country;
     $("paymentStep").hidden = false;
     $("payBtn").textContent = `Pay ${$("total").textContent} (simulated)`;
+    // The decision is frozen here. A decline is reported to XCover now (conversion tracking) — not on the click,
+    // because the shopper could still have changed their mind before this point.
+    if (state.offer && state.protection === "declined") {
+      const res = await fetch(`/api/orders/${state.transactionId}/opt-out`, { method: "POST" });
+      const r = await res.json();
+      if (r.envelope) logCall("opt out", r.envelope);
+    }
   });
 
   $("payBtn").addEventListener("click", pay);
