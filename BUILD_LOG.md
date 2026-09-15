@@ -6,28 +6,82 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Who did what — every heading carries it.** `candidate:` is what was done by hand — scope, design calls, diagnosis, tests, catches, review. `agent:` is what Claude Code produced — code, fixtures, verification scripts, log drafts. Each entry's `Manual:` line has the detail. Nothing was committed without the candidate reading the diff summary and the assumptions the agent surfaced.
 
+### Index — who did what, per entry
+
+| Entry | Candidate (by hand) | Agent (Claude Code) |
+|---|---|---|
+| **2026-09-12** Scaffold | chose to seed from own Adyen demo as a new repo, chose the Karpathy guidelines | copy, CLAUDE.md, README, first commit |
+| **2026-09-12** Auth + first call attempt | reproduced the timeout from own terminal, emailed Cover Genius | signing module from the docs, diagnosis of the TLS timeout |
+| **2026-09-13** Decision: build on a fixture while staging is blocked | the decision | proposed it, wrote the fixture from the spec |
+| **P1** 2026-09-13 — Strip Adyen | scope + keep-Adyen-optional decision | implementation |
+| **P2** 2026-09-13 — Catalog | SKU mix and prices | implementation |
+| **P3** 2026-09-13 — Offer proxy, fixture mode | scope, DB / OMS-view decisions | implementation |
+| **2026-09-13** Correction: fixture and request rebuilt from the RETAIL schema | asked to confirm the fixture's source (it was wrong) | diff and rebuild |
+| **2026-09-13** Finding: idempotency was only on cancel, and P3 had the United Capital bug | the finding | wrote the five rules into CLAUDE.md |
+| **2026-09-13** Schema identifier: omit rather than guess | raised the question, chose to omit, emailed CG | recommendation, code change |
+| **P4** 2026-09-13 — Checkout page | scope, then four rounds of layout direction | implementation |
+| **P4b** 2026-09-13 — Checkout explainability | design (table, split, badge) | implementation |
+| **P5** 2026-09-13 — Payload panel | scope per the brief | implementation, found the stale-loading bug |
+| **P5b** 2026-09-13 — Equal-height columns | design | CSS |
+| **P5c** 2026-09-13 — 60/40 columns | design | CSS |
+| **P5d** 2026-09-13 — Offer buttons and badge | design | CSS |
+| **P6** 2026-09-13 — Eligibility, consideration #1 | caught that it was never built | implementation |
+| **P7** 2026-09-13 — Confirm + ledger, idempotency rules 2–4 | demanded a status check on the rules first | implementation |
+| **P8** 2026-09-13 — Cancel path, consideration #4 / rule 5 | asked what #4 meant before accepting the design | implementation |
+| **P9** 2026-09-13 — Opt-out on decline | scope | implementation, decline-is-final-at-Continue decision |
+| **P10** 2026-09-13 — BOOKING_* webhooks, consideration #6 | scope (routing key, simulator, step-by-step doc) | implementation |
+| **P11** 2026-09-13 — Orders view | scope (Map + table, refund home, idempotency visible), required end-to-end testing before submission | implementation |
+| **T1** 2026-09-14 — Test Case 1a: eligibility | test, grounding against two doc pages, the 422 question | request-shape fix, A1/A7/A8 |
+| **T2** 2026-09-14 — Test Case 1b-i: offer generation | test, spotted the masked-id flicker and the USD-in-Germany | per-currency fixtures, fresh ids |
+| **T3** 2026-09-14 — Test Case 1b-ii: decline → opt-out | test, caught the OMS flicker | fix |
+| **T4** 2026-09-14 — Test Case 2: accept → pay → confirm | test | — (no change) |
+| **T5** 2026-09-14 — Test Case 2b: retry confirm | test, questioned 200 vs 409, asked for the body to be re-checked against the guide | body per the guide, validations, bypass demo |
+| **T6** 2026-09-14 — Test Case 2 revisited: confirm silently not called | the catch (a missing log entry) and the guide question | fix |
+| **T7** 2026-09-14 — Test Case 2 retest + 2b | retest, spotted the policyholder mismatch | fixture echo |
+| **T8** 2026-09-14 — Test Case 3: webhooks | all three cases, correct diagnosis of the duplicate | routed-by in outcomes |
+| **T9** 2026-09-14 — Test Case 4: refund | test, caught the USD premium on a GBP order | fix |
+| **T10** 2026-09-14 — Test Case 5 + Test Case 4 retest | tests | stage summary |
+| **T11** 2026-09-14 — Red team | requested it before submission | findings, five fixes, README next steps |
+
+
 ==================
 # Stage 1 — Build (2026-09-12 → 2026-09-13)
 ==================
 
-## 2026-09-12 — Scaffold — candidate: chose to seed from own Adyen demo as a new repo, chose the Karpathy guidelines · agent: copy, CLAUDE.md, README, first commit
+## 2026-09-12 — Scaffold
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| chose to seed from own Adyen demo as a new repo, chose the Karpathy guidelines | copy, CLAUDE.md, README, first commit |
 
 - Copied a prior Adyen payments checkout demo (Express + plain HTML/JS: product → checkout → result, server-side API proxy, HMAC-verified webhook handler) into a fresh repo. No Adyen code removed yet — the first commit is the honest starting point so the Adyen → XCover swap is visible in the diffs.
 - Added `CLAUDE.md` (Karpathy-inspired guidelines + project context), `.env.example`, this log.
 - Manual: nothing generated yet.
 
-## 2026-09-12 — Auth + first call attempt — agent: signing module from the docs, diagnosis of the TLS timeout · candidate: reproduced the timeout from own terminal, emailed Cover Genius
+## 2026-09-12 — Auth + first call attempt
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| reproduced the timeout from own terminal, emailed Cover Genius | signing module from the docs, diagnosis of the TLS timeout |
 
 - **Auth scheme confirmed from the official docs** (partner-docs.covergenius.com → Authentication): sign only the string `date: <RFC 1123 date>` with HMAC-SHA512, base64 (strict, not url-safe), URL-encode, send as `Authorization: Signature keyId="…",algorithm="hmac-sha512",signature="…"` plus `Date` and `X-Api-Key`. The OpenAPI blurb says "e.g. HMAC-SHA256 of method, path and date" — the reference implementations sign **date only, SHA-512**. Followed the code, not the blurb.
 - Wrote `lib/xcover-auth.js` by hand, verified byte-for-byte against the docs' Python/Postman examples. `scripts/xcover-curl.sh` wraps it for manual calls.
 - **Blocked:** `https://api.xcover-staging.com` accepts the TCP connection, then never answers the TLS Client Hello (curl 28/35, openssl s_client silent). DNS fine (18.204.152.241), port 80 answers 204, prod `api.xcover.com` and the docs host reachable from the same machine. Reproduced with the tool sandbox disabled. Reads as an IP allowlist on staging — public IP at the time: 24.89.124.89. Asked Cover Genius.
 - Request shape learned: schema-driven (`schema`, `customer{language,currency,country}`, `context{…partner schema…}`, optional `partner{}`); response carries offer `id`, `session_id`, `products[]` each with quote `id`, finance breakdown, PDS URL; confirm at `offers/{id}/confirm/`, decline at `offers/{id}/opt_out/`, cancel via `bookings/{id}/cancel`. The retail page says sample requests for this vertical come from the CSE — the `E3CCM` schema has to be asked for.
 
-## 2026-09-13 — Decision: build on a fixture while staging is blocked — candidate: the decision · agent: proposed it, wrote the fixture from the spec
+## 2026-09-13 — Decision: build on a fixture while staging is blocked
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| the decision | proposed it, wrote the fixture from the spec |
 
 - Emailed Cover Genius Sunday morning (IP allowlist + `E3CCM` retail schema). Rather than wait, extracted the create-offer response schema from the Offers API OpenAPI spec and wrote `fixtures/offer-response.json`; the front end is built against that, and `server.js` will swap fixture → live with one env var when the sandbox opens.
 
-## P1 — 2026-09-13 — Strip Adyen — candidate: scope + keep-Adyen-optional decision · agent: implementation
+## P1 — 2026-09-13 — Strip Adyen
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope + keep-Adyen-optional decision | implementation |
 
 **Asked:** see `PROMPTS.md` P1.
 
@@ -47,7 +101,11 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Re-add Adyen later?** Yes, possible: payment collection is Single Payment on RealCheap's side per the XCover payment guide, so Adyen would only ever be the mock PSP behind the "Pay" button. Deliberately out of scope until the protection flow is complete.
 
-## P2 — 2026-09-13 — Catalog — candidate: SKU mix and prices · agent: implementation
+## P2 — 2026-09-13 — Catalog
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| SKU mix and prices | implementation |
 
 **Asked:** see `PROMPTS.md` P2.
 
@@ -65,7 +123,11 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Manual:** Specified the SKU mix myself — two unbranded laptops at $349/$549 and a $4 sleeve — so eligibility would be demonstrable, not a checkbox; deferred laptop image generation and accepted SVG placeholders.
 
-## P3 — 2026-09-13 — Offer proxy, fixture mode — candidate: scope, DB / OMS-view decisions · agent: implementation
+## P3 — 2026-09-13 — Offer proxy, fixture mode
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope, DB / OMS-view decisions | implementation |
 
 **Asked:** see `PROMPTS.md` P3.
 
@@ -83,7 +145,11 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Manual:** Raised two design questions on this step — a relational store for the catalog (decided no: not on the rubric) and an OMS-style orders view (decided yes: it's where #4 and #6 become visible) — both recorded in TODO.md before moving on.
 
-## 2026-09-13 — Correction: fixture and request rebuilt from the RETAIL schema — candidate: asked to confirm the fixture's source (it was wrong) · agent: diff and rebuild
+## 2026-09-13 — Correction: fixture and request rebuilt from the RETAIL schema
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| asked to confirm the fixture's source (it was wrong) | diff and rebuild |
 
 Cover Genius replied: the schema is at `partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer`, and the staging restriction is on their side, being resolved. Asked the agent to confirm the fixture had been built from that page. **It had not** — it came from the generic Offers API spec embedded in the docs corpus. Diffed the two:
 
@@ -95,17 +161,29 @@ Cover Genius replied: the schema is at `partner-docs.covergenius.com/offers/vert
 
 **Manual:** the check was worth asking for — an agent-built fixture against the wrong spec would have surfaced as a broken demo the moment staging opened. Open item: get the schema identifier from the CSE.
 
-## 2026-09-13 — Finding: idempotency was only on cancel, and P3 had the United Capital bug — candidate: the finding · agent: wrote the five rules into CLAUDE.md
+## 2026-09-13 — Finding: idempotency was only on cancel, and P3 had the United Capital bug
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| the finding | wrote the five rules into CLAUDE.md |
 
 Candidate flagged that the scope table put idempotency on the refund/cancel step only, while duplicate *issuance* happens at confirm. Checked the retail confirm-offer spec: `x-idempotency-key` is supported, 409 = cached result (treat as success), 423 = in progress (retry). Then noticed the agent's P3 `/api/offers` mints a fresh `partner.transaction_id` on every call — a reload creates a new order reference, which is precisely the client-generated-key-per-attempt failure that produced the $60K United Capital invoice. Rules written into `CLAUDE.md` → Idempotency (one order ref per cart, key derived by UUID v5 from the natural key, server-side ledger keyed by `transaction_id`, 409/423 handling, cancel under the same rules). P4 fixes the `transaction_id` lifecycle; the ledger lands with confirm.
 
 **Manual:** entirely the candidate's catch. The agent built the endpoint correctly against the spec and still reproduced the exact production bug the design is meant to prevent — the spec says "e.g., UUID", and a UUID is what it reached for.
 
-## 2026-09-13 — Schema identifier: omit rather than guess — candidate: raised the question, chose to omit, emailed CG · agent: recommendation, code change
+## 2026-09-13 — Schema identifier: omit rather than guess
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| raised the question, chose to omit, emailed CG | recommendation, code change |
 
 The retail create-offer doc says the CSE provides the identifier *and* that the partner default is used when the field is omitted; its `acme-schema-v1` is an example value, not a real default. Changed `/api/offers` to send `schema` only when `XCOVER_SCHEMA` is set. First live call goes without it; a 422 `offer_validation_schema_required` is the trigger to ask. Removed the question from the email. Webhook finding recorded alongside: the Offers API documents `BOOKING_CREATED/UPDATED/CANCELLED` and `RENEWAL_*` events only — no claim-status event; claims are XClaim's surface. Asking the CSE which webhook carries claim status, and whether a staging listener can be registered.
 
-## P4 — 2026-09-13 — Checkout page — candidate: scope, then four rounds of layout direction · agent: implementation
+## P4 — 2026-09-13 — Checkout page
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope, then four rounds of layout direction | implementation |
 
 **Asked:** see `PROMPTS.md` P4.
 
@@ -122,7 +200,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** Directed the checkout's shape over four follow-ups: order summary as a line-items table, 60/40 column split, equal-height columns, Recommended badge on the card border, accept/decline on one row. Clicked through the Germany case and saw the currency relabel before it was fixed.
 
-## P4b — 2026-09-13 — Checkout explainability — candidate: design (table, split, badge) · agent: implementation
+## P4b — 2026-09-13 — Checkout explainability
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| design (table, split, badge) | implementation |
 
 **Asked:** see `PROMPTS.md` P4b.
 
@@ -133,7 +215,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** My change request — the table and badge were for explainability in the room, so a panelist can read the price stack at a glance.
 
-## P5 — 2026-09-13 — Payload panel — candidate: scope per the brief · agent: implementation, found the stale-loading bug
+## P5 — 2026-09-13 — Payload panel
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope per the brief | implementation, found the stale-loading bug |
 
 **Asked:** see `PROMPTS.md` P5.
 
@@ -150,25 +236,41 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** Asked for the panel per the brief's third must-have; later verified in testing that headers were redacted and the FIXTURE badge shown (T1).
 
-## P5b — 2026-09-13 — Equal-height columns — candidate: design · agent: CSS
+## P5b — 2026-09-13 — Equal-height columns
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| design | CSS |
 
 **Asked:** see `PROMPTS.md` P5b.
 **Changed:** four CSS lines. The order summary had `height: fit-content` from the original template, which opted it out of the grid's default stretch; removed for the checkout grid, and the offer column made a flex column so the offer card fills to the shared bottom edge.
 **Verified in a browser:** both columns top 246 / bottom 1201 at 1024px.
 **Manual:** My change request.
 
-## P5c — 2026-09-13 — 60/40 columns — candidate: design · agent: CSS
+## P5c — 2026-09-13 — 60/40 columns
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| design | CSS |
 
 **Asked:** see `PROMPTS.md` P5c. **Changed:** `3fr 1fr` → `3fr 2fr`, one line. **Verified:** measured 60% / 40% at 1024px; both columns still share a bottom edge (942). The offer column's stacked buttons and benefit list now have room; the line-items table wraps the product name at this width, which reads fine.
 
-## P5d — 2026-09-13 — Offer buttons and badge — candidate: design · agent: CSS
+## P5d — 2026-09-13 — Offer buttons and badge
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| design | CSS |
 
 **Asked:** see `PROMPTS.md` P5d.
 **Changed:** buttons are a single flex row, equal width (`flex: 1 1 0; min-width: 0`), text allowed to wrap inside them; they stack only under 480px. Badge is absolutely positioned straddling the card's top border, so it no longer occupies a line.
 **First attempt was wrong:** I kept `white-space: nowrap` on the buttons, and the API's own CTA copy ("No thanks, I'll take the risk") is wider than half the column at 40% — so the row still wrapped. The copy comes from XCover, not from us, so the buttons have to accommodate whatever length it is; letting the text wrap was the fix, not shortening it.
 **Verified in a browser:** desktop — same top, same height, 157px each; badge straddles the border; 375px mobile — stacked.
 
-## P6 — 2026-09-13 — Eligibility, consideration #1 — candidate: caught that it was never built · agent: implementation
+## P6 — 2026-09-13 — Eligibility, consideration #1
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| caught that it was never built | implementation |
 
 **Asked:** see `PROMPTS.md` P6. **Candidate's catch:** P3 deferred eligibility to "Block 2" and nothing picked it up — the sleeve quoted a $49.99 plan. Reproduced with curl before touching anything (`RC-SL-004 → 200, products: 1`).
 
@@ -184,7 +286,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** My catch: re-tested the sleeve after P5 and found it still quoted a plan; asked for it to be built properly rather than accepting the deferral.
 
-## P7 — 2026-09-13 — Confirm + ledger, idempotency rules 2–4 — candidate: demanded a status check on the rules first · agent: implementation
+## P7 — 2026-09-13 — Confirm + ledger, idempotency rules 2–4
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| demanded a status check on the rules first | implementation |
 
 **Asked:** see `PROMPTS.md` P7. Candidate asked for a status check first; answer was that only rule 1 (transaction_id lifecycle) existed — rules 2–5 all attach to confirm/cancel, which didn't exist yet.
 
@@ -202,7 +308,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Not done here:** rule 5 (cancel) and the opt-out call on decline — next.
 **Manual:** Before letting the build move on, asked whether the idempotency and UUID v5 rules were actually implemented — only rule 1 was. This step exists because of that check.
 
-## P8 — 2026-09-13 — Cancel path, consideration #4 / rule 5 — candidate: asked what #4 meant before accepting the design · agent: implementation
+## P8 — 2026-09-13 — Cancel path, consideration #4 / rule 5
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| asked what #4 meant before accepting the design | implementation |
 
 **Asked:** see `PROMPTS.md` P8.
 
@@ -220,7 +330,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** Asked what consideration #4 actually meant in context before accepting the design; then confirmed the refund/repeat behaviour by clicking through in testing (T9, T10).
 
-## P9 — 2026-09-13 — Opt-out on decline — candidate: scope · agent: implementation, decline-is-final-at-Continue decision
+## P9 — 2026-09-13 — Opt-out on decline
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope | implementation, decline-is-final-at-Continue decision |
 
 **Asked:** see `PROMPTS.md` P9.
 
@@ -232,7 +346,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** Accepted the decision that a decline is reported when frozen at Continue, not on the click; verified the 204 in testing (T3).
 
-## P10 — 2026-09-13 — BOOKING_* webhooks, consideration #6 — candidate: scope (routing key, simulator, step-by-step doc) · agent: implementation
+## P10 — 2026-09-13 — BOOKING_* webhooks, consideration #6
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope (routing key, simulator, step-by-step doc) | implementation |
 
 **Asked:** see `PROMPTS.md` P10.
 
@@ -256,7 +374,11 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Manual:** Specified the scope myself — route BOOKING_CREATED/CANCELLED by partner_transaction_id into the ledger, a way to simulate an inbound event, and a step-by-step doc — and later ran all three simulator cases (T8).
 
-## P11 — 2026-09-13 — Orders view — candidate: scope (Map + table, refund home, idempotency visible), required end-to-end testing before submission · agent: implementation
+## P11 — 2026-09-13 — Orders view
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| scope (Map + table, refund home, idempotency visible), required end-to-end testing before submission | implementation |
 
 **Asked:** see `PROMPTS.md` P11.
 
@@ -278,7 +400,11 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Stage 1 exit state (commit `fb0fc89`, 24 commits):** catalog · checkout with quote / opt-in / decline / quantity / country · eligibility (fixture 422) · payload panel → integration log · simulated payment · confirm with derived `x-idempotency-key`, ledger, 409/423 handling · opt-out · cancel with preview + single refund record · `BOOKING_*` webhooks with signed simulator · orders view. Build time ≈ 12 h.
 
-## T1 — 2026-09-14 — Test Case 1a: eligibility — candidate: test, grounding against two doc pages, the 422 question · agent: request-shape fix, A1/A7/A8
+## T1 — 2026-09-14 — Test Case 1a: eligibility
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| test, grounding against two doc pages, the 422 question | request-shape fix, A1/A7/A8 |
 
 **Asked:** see `PROMPTS.md` T1.
 
@@ -292,7 +418,11 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Manual:** My test and my grounding: ran the sleeve case, compared the request body against the product-retail create-offer page and the 422 against error-versioning, and asked which 422 applied and why.
 
-## T2 — 2026-09-14 — Test Case 1b-i: offer generation — candidate: test, spotted the masked-id flicker and the USD-in-Germany · agent: per-currency fixtures, fresh ids
+## T2 — 2026-09-14 — Test Case 1b-i: offer generation
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| test, spotted the masked-id flicker and the USD-in-Germany | per-currency fixtures, fresh ids |
 
 **Asked:** see `PROMPTS.md` T2.
 
@@ -306,7 +436,11 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Manual:** My test: noticed the offer/quote ids flickering behind the mask and asked whether they were the same across re-quotes — they were, and that turned out to be the fixture misleading us. Also flagged the Germany currency and the one-line-item reading.
 
-## T3 — 2026-09-14 — Test Case 1b-ii: decline → opt-out — candidate: test, caught the OMS flicker · agent: fix
+## T3 — 2026-09-14 — Test Case 1b-ii: decline → opt-out
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| test, caught the OMS flicker | fix |
 
 **Asked:** see `PROMPTS.md` T3.
 
@@ -318,11 +452,19 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Manual:** My test: caught the declined/undecided flicker in the OMS on auto-refresh.
 
-## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm — candidate: test · PASS, no change
+## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| test | — (no change) |
 
 Candidate reports the accept → Continue → policyholder → Pay (simulated) → confirm → result page path passes end to end. Nothing changed. For the record, what this case exercises: payment recorded before confirm (server-enforced), derived `x-idempotency-key` visible in the Integration log, booking on the result page with cover period, COI / PDS / claim links, and the OMS row moving to "Policy active" with the booking id filled.
 
-## T5 — 2026-09-14 — Test Case 2b: retry confirm — candidate: test, questioned 200 vs 409, asked for the body to be re-checked against the guide · agent: body per the guide, validations, bypass demo
+## T5 — 2026-09-14 — Test Case 2b: retry confirm
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| test, questioned 200 vs 409, asked for the body to be re-checked against the guide | body per the guide, validations, bypass demo |
 
 **Asked:** see `PROMPTS.md` T5.
 
@@ -340,7 +482,11 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Manual:** My test and my grounding: questioned why a retry returned 200 when the guide says 409, and asked for the request/response fields to be re-checked against the Confirm Offer guide — which surfaced phone, partner_transaction_id and payment_details.
 
-## T6 — 2026-09-14 — Test Case 2 revisited: confirm silently not called — candidate: the catch (a missing log entry) and the guide question · agent: fix
+## T6 — 2026-09-14 — Test Case 2 revisited: confirm silently not called
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| the catch (a missing log entry) and the guide question | fix |
 
 **Asked:** see `PROMPTS.md` T6.
 
@@ -358,7 +504,11 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Manual:** My catch, and the most important one: noticed after payment that the confirm call was missing from the Integration log, and asked what the guide's 'provision the product' sentence meant. The agent had written the silent path on purpose.
 
-## T7 — 2026-09-14 — Test Case 2 retest + 2b — candidate: retest, spotted the policyholder mismatch · agent: fixture echo
+## T7 — 2026-09-14 — Test Case 2 retest + 2b
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| retest, spotted the policyholder mismatch | fixture echo |
 
 **Asked:** see `PROMPTS.md` T7.
 
@@ -368,7 +518,11 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Manual:** My test: spotted the response policyholder not matching the request and asked whether it was the fixture — it was.
 
-## T8 — 2026-09-14 — Test Case 3: webhooks — candidate: all three cases, correct diagnosis of the duplicate · agent: routed-by in outcomes
+## T8 — 2026-09-14 — Test Case 3: webhooks
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| all three cases, correct diagnosis of the duplicate | routed-by in outcomes |
 
 **Asked:** see `PROMPTS.md` T8. All three outcomes as designed.
 
@@ -378,7 +532,11 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Manual:** My test: ran all three webhook cases and correctly diagnosed that the null-partner_transaction_id run came back 'duplicate' because it had been routed by booking id to an order that already had the event.
 
-## T9 — 2026-09-14 — Test Case 4: refund — candidate: test, caught the USD premium on a GBP order · agent: fix
+## T9 — 2026-09-14 — Test Case 4: refund
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| test, caught the USD premium on a GBP order | fix |
 
 **Asked:** see `PROMPTS.md` T9.
 
@@ -388,7 +546,11 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Manual:** My test: caught the refund showing a fixed US-dollar premium on a GBP order.
 
-## T10 — 2026-09-14 — Test Case 5 + Test Case 4 retest — candidate: tests · PASS, stage summary by agent
+## T10 — 2026-09-14 — Test Case 5 + Test Case 4 retest
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| tests | stage summary |
 
 Restart clears the ledger (in-memory, by design and documented); the refund now shows the premium in the currency it was charged in. **End of the end-to-end test stage.**
 
@@ -411,7 +573,11 @@ Restart clears the ledger (in-memory, by design and documented); the refund now 
 
 And one that was neither: **T6**, the silent failed confirm — written on purpose, commented as resilience, found by noticing a log entry that wasn't there.
 
-## T11 — 2026-09-14 — Red team — candidate: requested it before submission · agent: findings, five fixes, README next steps
+## T11 — 2026-09-14 — Red team
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| requested it before submission | findings, five fixes, README next steps |
 
 **Asked:** see `PROMPTS.md` T11.
 
