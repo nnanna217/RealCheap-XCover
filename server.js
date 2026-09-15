@@ -254,10 +254,11 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
   if (order.booking_id && order.status === "confirmed") {
     const body = { reason_for_cancellation: reason, quotes: order.quote_ids.map((id) => ({ id })) };
     // Guide: "always preview the cancellation to show the customer the refund amount before processing".
-    const preview = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: true }, "cancel-preview.json", {}, { echoQuoteIds: true });
+    const echo = { echoQuoteIds: true, echoPrice: { currency: order.offer_currency || "USD", unit: order.premium_unit || 0, quantity: order.quantity || 1 } };
+    const preview = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: true }, "cancel-preview.json", {}, echo);
     envelopes.push({ event: "cancel booking (preview)", envelope: preview });
     if (preview.ok) {
-      const cancel = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: false }, "cancel-response.json", {}, { echoQuoteIds: true });
+      const cancel = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: false }, "cancel-response.json", {}, echo);
       envelopes.push({ event: "cancel booking", envelope: cancel });
       if (cancel.ok) { cancelBody = cancel.response; premiumRefund = Number((cancelBody.refund && cancelBody.refund.amount) || 0); }
       else return res.status(cancel.status === 0 ? 502 : 200).json({ served_from: "xcover", cancelled: false, order, envelopes, error: "XCover did not cancel the booking; no refund issued — retry later" });
@@ -266,10 +267,17 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
     }
   }
 
-  // ONE refund record, product + premium, written once.
+  // ONE refund record, product + premium, written once. Product is USD (RealCheap list price); premium is in the
+  // offer currency (what XCover charged). Two currencies are two amounts — never summed with an invented rate (A5).
+  const premiumCurrency = (cancelBody && cancelBody.currency) || order.offer_currency || "USD";
+  const fmt = (n, c) => new Intl.NumberFormat("en", { style: "currency", currency: c }).format(n);
+  const sameCurrency = premiumCurrency === "USD";
   const refund = {
-    product_amount: productRefund, premium_amount: premiumRefund, total: productRefund + premiumRefund,
-    total_formatted: `$${(productRefund + premiumRefund).toFixed(2)}`, currency: "USD", reason, at: new Date().toISOString(),
+    product_amount: productRefund, product_currency: "USD",
+    premium_amount: premiumRefund, premium_currency: premiumCurrency,
+    total: sameCurrency ? Number((productRefund + premiumRefund).toFixed(2)) : null,
+    total_formatted: sameCurrency ? fmt(productRefund + premiumRefund, "USD") : `${fmt(productRefund, "USD")} + ${fmt(premiumRefund, premiumCurrency)}`,
+    reason, at: new Date().toISOString(),
     xcover_cancellation: cancelBody ? { booking_id: cancelBody.id, status: cancelBody.status, cancelled_at: cancelBody.cancelled_at, refund: cancelBody.refund } : null,
   };
   let updated = order;

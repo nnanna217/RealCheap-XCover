@@ -78,7 +78,7 @@ function render(o) {
     <section class="refund-card">
       <h3>Returns</h3>
       ${o.refund ? `
-        <p><strong>Refunded ${o.refund.total_formatted}</strong> on ${new Date(o.refund.at).toLocaleString()} — product ${money(o.refund.product_amount, "USD")}${o.refund.premium_amount ? ` + premium ${money(o.refund.premium_amount, "USD")} (XCover-calculated${o.refund.xcover_cancellation && o.refund.xcover_cancellation.refund && o.refund.xcover_cancellation.refund.within_cooling_off_period ? ", within cooling-off" : ""})` : ""}. One refund, recorded once.</p>
+        <p><strong>Refunded ${o.refund.total_formatted}</strong> on ${new Date(o.refund.at).toLocaleString()} — product ${money(o.refund.product_amount, o.refund.product_currency || "USD")}${o.refund.premium_amount ? ` + premium ${money(o.refund.premium_amount, o.refund.premium_currency || "USD")} (XCover-calculated${o.refund.xcover_cancellation && o.refund.xcover_cancellation.refund && o.refund.xcover_cancellation.refund.within_cooling_off_period ? ", within cooling-off" : ""})` : ""}. One refund, recorded once${o.refund.total === null ? " — two currencies, two settlements" : ""}.</p>
         ${b && b.status === "CANCELLED" ? `<p class="small muted">Booking <code>${b.id}</code> is CANCELLED with XCover.</p>` : ""}` : `
         <p class="small muted">Returning the item refunds the product and, if a plan was bought, cancels it with XCover and refunds the premium XCover calculates — as one refund.</p>`}
       <div class="demo-tools">

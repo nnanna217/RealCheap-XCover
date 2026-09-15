@@ -375,3 +375,13 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 **Changed for clarity, not behaviour:** the handler's response and every outcome note now say `routed by <field>` explicitly, so the demo message reads "routed by booking_id; same event already applied…" without needing the table. README step 3 says to run the null-txn case first on a fresh order to see `applied`, and why it otherwise reads `duplicate`.
 
 **Manual:** *(candidate to fill.)*
+
+## T9 — 2026-09-14 — Test Case 4: refund (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T9.
+
+**Two defects, same root as the checkout's currency bug (P4).** (1) The cancel fixture carried a fixed `refund.amount: 49.99` USD, so a GBP order (premium £39.99 × 2) was "refunded" $49.99. Cancel calls now use the same `echoPrice` adaptation as confirm — a real cancel refunds what was charged, in the currency it was charged in. (2) The refund record *summed* the USD product refund with the premium refund regardless of currency. It now keeps `product_currency` (USD, RealCheap's list price) and `premium_currency` (the offer currency) apart; `total` is only computed when they match, otherwise `total_formatted` reads e.g. `$698.00 + £79.98` — two currencies, two settlements, no invented rate (A5), and the result page says so.
+
+**Verified:** GBP order, qty 2 → cancel reply `GBP £79.98`; refund record `$698.00 + £79.98`, `total: null`; USD order → `$398.99`, `total: 398.99`. Re-send refund confirmed by the candidate → ledger.
+
+**Manual:** *(candidate to fill.)*

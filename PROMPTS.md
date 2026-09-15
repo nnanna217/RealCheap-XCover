@@ -109,3 +109,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T8 — 2026-09-14 — Test Case 3: webhooks
 
 > BOOKING_CANCELLED, both boxes unchecked → routed via partner_transaction_id, outcome applied. Bad signature → signature mismatch, HTTP 401. Null partner_transaction_id only → signature passed, outcome duplicate, "same event already applied; acknowledged, not re-applied". Does the duplicate occur because of the routing done via the booking id? I believe yes.
+
+## T9 — 2026-09-14 — Test Case 4: refund
+
+> On the result page a fixed US-dollar amount is used for the premium refund instead of the GBP equivalent that was paid: "Refunded $747.99 — product US$698.00 + premium US$49.99". Demo: re-send the same refund — PASS.
