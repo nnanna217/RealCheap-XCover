@@ -4,6 +4,28 @@ Every prompt given to the coding agent, verbatim, in order. Pairs with `BUILD_LO
 
 Stages are separated by `==================` lines. Entry numbers stay unique across stages (P-numbers for the build, T-numbers for testing) and match `BUILD_LOG.md`.
 
+## Plan → prompts
+
+The build was planned as seven goal-driven steps (each with a verify criterion) before any prompt was written, plus a second block for the brief's six technical considerations. This is how the plan mapped onto what was actually prompted, in order, with the deviations.
+
+| Planned step | Verify criterion (as planned) | Became | Deviation |
+|---|---|---|---|
+| 1. Strip Adyen | `npm start` boots, `/` serves, no `adyen` in `git grep` | **P1** | Webhook handler couldn't be kept literally (its validator *was* Adyen) — replaced with XCover's scheme |
+| 2. Catalog | `index.html` lists three SKUs; `product.html?sku=` shows one | **P2** | — |
+| 3. Offer proxy, fixture mode | `curl -X POST /api/offers` returns the fixture with `mode: 'fixture'` | **P3** | Verify as written returns 400 (no body); needs a `sku` |
+| 4. Checkout page | Changing quantity or country re-fetches | **P4**, then **P4b · P5b · P5c · P5d** | Plan referenced `product_rules[0].initial_state` — not in the retail response; four layout follow-ups were unplanned |
+| 5. Payload panel | Badge matches `XCOVER_MODE` | **P5** | Built as a log of every call, not a single panel |
+| 6. Decline path (opt-out) | Panel shows the opt-out request | **P9** | Deferred behind confirm so the ledger existed first |
+| 7. Fail-open | Unreachable host in live mode → checkout still completes | **P6** (ineligible vs. unavailable messaging) + **T11** (3 s budget) | Split: the message half landed with eligibility, the timeout half in the red team |
+| Block 2 — #1 eligibility | Sleeve → no offer, handled gracefully | **P6** | Only built after the candidate caught it was still quoting (P3 had deferred it) |
+| Block 2 — #2 confirm-offer, idempotent | Same cart confirmed twice → one policy | **P7** | Preceded by a status check: only idempotency rule 1 existed |
+| Block 2 — #4 cancellation | Refund → `bookings/{id}/cancel`, no duplicate compensation | **P8** | Cancel has no idempotency key in the docs — ledger is the sole guard (rule 5 amended) |
+| Block 2 — #6 webhook | Signed inbound event updates the order | **P10** | Plan assumed a claim-status event; the Offers API documents `BOOKING_*` only |
+| Orders view (planned as "P8" in TODO.md) | One row per order, refund home, idempotency visible | **P11** | Numbered P11 because P8 had been taken by cancel |
+| Block 2 — #3 quantity, #5 currency | — | **P4** | Landed inside the checkout step rather than as separate steps |
+
+Not in the plan at all, prompted as they surfaced: the retail-schema correction, the idempotency-rules finding, the schema-identifier decision, and all of Stage 2 (testing, T1–T11).
+
 ==================
 # Stage 1 — Build prompts (2026-09-12 → 2026-09-13)
 ==================
