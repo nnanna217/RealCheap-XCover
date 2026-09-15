@@ -5,6 +5,8 @@ Decisions raised during the build that are deliberately *not* being done yet, wi
 ## Won't do (unless time remains after the deck is rehearsed)
 
 - **Relational DB for the catalog.** Raised after P3 (price/category are looked up server-side). Decided against: three SKUs, a 12-hour cap, nothing on the rubric scores persistence, and `products.js` already makes the point that the client never supplies a price. Demo line: "in production this lookup is RealCheap's catalog service / OMS; here it's a module." If time is left: SQLite (`better-sqlite3`) seeded from `products.js`, ~30 min, one file.
+- **Real payment collection.** Payment is a simulated step on purpose: XCover's payment guide makes RealCheap the merchant of record under Single Payment, so a PSP would sit entirely on RealCheap's side and add a third-party dependency (keys, a sandbox, a webhook) that isn't what the brief evaluates. The invariant that matters — confirm fires only after payment succeeds — is enforced server-side regardless of how payment is collected.
+- **Email / text to the customer.** Not built. After Confirm Offer, XCover itself "distributes confirmation to the customer" — the policy documents email comes from XCover, not the partner. RealCheap's own order-confirmation email/SMS is ordinary OMS work outside the brief; sending real messages from a prototype would also mean a third-party dependency (SendGrid/Twilio) for no scored benefit.
 - **Re-add Adyen as the PSP behind the Pay button.** XCover's payment guide makes RealCheap the merchant of record under Single Payment, so a real PSP would only ever sit behind the simulated "Pay" step. Out of scope until the protection flow is complete (P1 note).
 
 ## Done — the order store landed with confirm (P7)
