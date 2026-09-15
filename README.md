@@ -27,25 +27,6 @@ The page then labels responses `live`. Nothing else changes — the request shap
 
 Manual signed calls: `scripts/xcover-curl.sh POST offers/ '<json>'` (reads `.env`).
 
-## Simulating an inbound XCover webhook (consideration #6)
-
-XCover signs each webhook with the key/secret pair you register through your CSE and retries up to 3 times on a non-200. Registering a real listener needs a public URL, so the prototype ships a simulator that builds the **documented** `BOOKING_*` payload from the ledger, signs it **exactly as XCover would** (HMAC over the `Date` header, secret from `.env`), and delivers it to this server's own `/api/webhooks` — the request genuinely traverses signature verification and routing.
-
-1. `.env.example` ships a demo key/secret pair (`XCOVER_WEBHOOK_KEY` / `XCOVER_WEBHOOK_SECRET`) — it stands in for the pair you'd register with the CSE, and any value works because the simulator signs and the handler verifies with the same one. If you removed it, put any string back and restart; without a secret the handler skips verification (with a warning) and the simulator refuses to run.
-2. Create a booking: catalog → laptop → checkout → **Yes, protect my laptop** → Continue → Pay. Note the order ref (`RC-…`) on the result page.
-3. **From the result page:** in "Webhooks from XCover", pick an event and click **Demo: simulate this webhook**. The table shows what was received, how it was routed (`partner_transaction_id` or `booking_id`) and the outcome; the integration log below shows the raw event. Tick **bad signature** to see a 401; tick **null partner_transaction_id** (the docs' own examples send null) to see routing fall back to the booking id — do this one **first** on a fresh order if you want the outcome to read `applied`; on an order that already received the same event it reads `duplicate` (routed by booking id, then deduped — the dedup key ignores `partner_transaction_id` on purpose, since the event is the same either way).
-4. **Or from a terminal:**
-   ```bash
-   scripts/send-webhook.sh RC-XXXXXXXX-XXXXXX BOOKING_CANCELLED
-   scripts/send-webhook.sh RC-XXXXXXXX-XXXXXX BOOKING_CREATED --no-txn   # route by booking id
-   scripts/send-webhook.sh RC-XXXXXXXX-XXXXXX BOOKING_CANCELLED --tamper  # expect 401
-   ```
-5. **Or hand-roll one** against `POST /api/webhooks` with headers `Date` (RFC 1123), `X-Api-Key`, and `Authorization: Signature keyId="…",algorithm="hmac-sha256",signature="<urlencoded base64 HMAC of 'date: <Date>'>"` — the body is `{ "event": "BOOKING_CANCELLED", "payload": { "id": "<booking>", "status": "CANCELLED", "partner_transaction_id": "<order ref>", "quotes": [...] } }`.
-
-What the handler does with an event (`lib/webhooks.js`): verify signature → route by `partner_transaction_id`, falling back to booking id → **dedup** on a key derived from (event, booking, status, quote statuses), because the documented payload carries no event id → **never regress** `CANCELLED` to `CONFIRMED` if events arrive out of order → apply. `BOOKING_CANCELLED` with no RealCheap refund on record flags a **premium refund due** (XCover calculates, RealCheap pays — it is never auto-paid). Events for unknown bookings are acknowledged (so XCover stops retrying) and parked for reconciliation; undocumented events are stored on the order without guessing. Always 200 once verified — a non-200 only makes XCover retry, which is right for transient failures, not for "I don't recognise this".
-
-Claim status: the Offers API documents no claim event (claims are XClaim's surface); the handler stores any such event on the order without applying it, pending confirmation from Cover Genius of where claim status actually arrives.
-
 ## Layout
 
 - `server.js` — Express: serves `public/`, proxies XCover calls (secrets stay server-side), receives XCover webhooks
@@ -62,6 +43,17 @@ Claim status: the Offers API documents no claim event (claims are XClaim's surfa
 - `PROMPTS.md` — every prompt given to the agent, verbatim, in order
 - `BUILD_LOG.md` — what each prompt produced, what was wrong, what was fixed by hand
 - `TODO.md` — decisions deliberately deferred, with reasons
+
+## Simulating an inbound XCover webhook (consideration #6)
+
+XCover signs each webhook with a key/secret pair registered through your CSE and retries up to 3× on a non-200. Registering a real listener needs a public URL, so the prototype ships a simulator: it builds the documented `BOOKING_*` payload from the ledger, signs it exactly as XCover would (HMAC over the `Date` header), and posts it to this server's own `/api/webhooks` — the request goes through real verification and routing.
+
+1. `.env.example` already carries a demo key/secret pair; any value works because the simulator signs and the handler verifies with the same one.
+2. Create a booking: catalog → laptop → checkout → **Yes, protect my laptop** → Continue → Pay.
+3. On the result page, under "Webhooks from XCover", pick an event and click **Demo: simulate this webhook**. Tick **bad signature** for a 401; tick **null partner_transaction_id** (the docs' examples send null) to see routing fall back to the booking id — run that one first on a fresh order to see `applied` rather than `duplicate`.
+4. Or from a terminal: `scripts/send-webhook.sh <ORDER_REF> BOOKING_CANCELLED [--tamper] [--no-txn]`.
+
+What the handler does (`lib/webhooks.js`): verify signature → route by `partner_transaction_id`, falling back to booking id → dedup on a key derived from (event, booking, status, quote statuses) — the documented payload has no event id → never regress `CANCELLED` to `CONFIRMED` → apply. `BOOKING_CANCELLED` with no RealCheap refund on record flags a premium refund due (XCover calculates, RealCheap pays). Unknown bookings are acknowledged and parked for reconciliation; undocumented events are stored without guessing. Claim status: no claim event is documented on the Offers API (claims are XClaim's surface) — asked Cover Genius where it arrives.
 
 ## Origin
 
