@@ -55,6 +55,33 @@ XCover signs each webhook with a key/secret pair registered through your CSE and
 
 What the handler does (`lib/webhooks.js`): verify signature → route by `partner_transaction_id`, falling back to booking id → dedup on a key derived from (event, booking, status, quote statuses) — the documented payload has no event id → never regress `CANCELLED` to `CONFIRMED` → apply. `BOOKING_CANCELLED` with no RealCheap refund on record flags a premium refund due (XCover calculates, RealCheap pays). Unknown bookings are acknowledged and parked for reconciliation; undocumented events are stored without guessing. Claim status: no claim event is documented on the Offers API (claims are XClaim's surface) — asked Cover Genius where it arrives.
 
+## Red team — what a production review would flag
+
+A self-review done before submission, from the standpoint of someone who has seen partner integrations fail. Five findings were cheap enough to fix immediately; the rest are the honest next steps.
+
+### Fixed before submission
+
+| Finding | Why it matters | Fix |
+|---|---|---|
+| Webhook replay: the signature covers only the `Date` header, and nothing checked freshness | A captured valid webhook could be replayed indefinitely | Reject if `Date` is outside ±5 min; verify `keyId` matches the registered key |
+| Demo endpoints were reachable in live mode | `/api/demo/webhook` signs with the real secret — a forged-event vector; `simulate` / `force_xcover` could reach XCover | All demo paths return 404 / are ignored unless `XCOVER_MODE=fixture` |
+| Stored XSS via policyholder name | Result and OMS pages interpolated shopper input unescaped; the OMS is viewed by staff | Escaped at render |
+| `security_token` shown in the Integration log | A real token is a bearer for customer-facing policy links | Scrubbed from every JSON response; the ledger keeps it |
+| 8 s fail-open budget on create-offer | A checkout that waits 8 s for the insurance call isn't failing open, it's slow | 3 s for create-offer (`XCOVER_OFFER_TIMEOUT_MS`); confirm/cancel keep 8 s |
+
+### Next steps — in the order I'd do them
+
+1. **Persist the ledger and make it the unique index it stands in for.** The `Map` is per-process: a restart loses orders, and two concurrent confirms can both pass the ledger check (XCover's 423/409 is the only thing stopping a double issue today). A single `orders` table with `transaction_id` unique and a conditional update on `booking_id IS NULL` replaces both the Map and the race.
+2. **Automatic retry of a pending confirm.** A paid-but-unconfirmed plan is a liability (`confirm_error`). It's visible and manually retryable; it should also be retried on a schedule with backoff, and alerted on after N failures.
+3. **Cancel is not idempotent on XCover's side.** If a cancel call times out *after* XCover processed it, the retry gets a 422 ("already cancelled") and the refund is never written. Treat that 422 as success and proceed to the refund.
+4. **Authentication on the OMS and order endpoints.** `/api/orders` lists every order (policyholder email, phone) and `/refund` can be called by anyone who knows an order ref. These are internal OMS operations; in production they sit behind staff auth, and order refs should not be the only key.
+5. **Webhook dedup is by status, not by content.** Two `BOOKING_UPDATED` events with the same statuses but different prices would be deduped. Ask Cover Genius for an event id or sequence number on the payload; until then, include a content hash in the key.
+6. **Reconciliation job.** Duplicate issuance throws no errors — everything returns 200/201. A nightly diff of the ledger against XCover bookings (by `partner_transaction_id`), plus the `UNMATCHED-*` queue, is the only thing that catches what the guards miss.
+7. **Multiple products per offer** (assumption A9): render a choice, confirm the chosen quote ids.
+8. **Live capture replaces fixtures.** Every fixture is a placeholder shaped from the spec; the first live 200 for each endpoint should be saved and become the fixture, so fixture mode stops being a model of the API and becomes a recording of it.
+9. **Regional price lists.** Product prices are USD list prices; a real RealCheap has per-storefront pricing, which is why the checkout shows two currencies rather than converting.
+10. **Smaller things:** validate `country`/`currency` server-side against the seven supported markets; index orders by booking id instead of scanning; stop logging full webhook bodies (PII) to the console; rate-limit `/api/offers`.
+
 ## Origin
 
 Scaffolded from a prior Adyen payments checkout demo. Embedded insurance has the same integration shape as embedded payments — server-side secret, quote-or-session, webhook.

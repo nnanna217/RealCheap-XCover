@@ -408,3 +408,13 @@ Restart clears the ledger (in-memory, by design and documented); the refund now 
 2. **Two findings came from reading the *guide* pages, not the OpenAPI blocks** — the create-offer request shape (T1) and the confirm body with `phone` / `partner_transaction_id` / `payment_details` (T5). The spec and the guides disagree in places; the second of those gaps would have broken webhook routing in production.
 
 And one that was neither: **T6**, the silent failed confirm — written on purpose, commented as resilience, found by noticing a log entry that wasn't there.
+
+## T11 — 2026-09-14 — Red team (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T11.
+
+**Five fixed now** (each verified): webhook replay — `Date` freshness ±5 min and `keyId` check (fresh → 200, 10-min-old → 401, wrong key → 401); demo endpoints gated to fixture mode (`/api/demo/webhook` → 404 in live; `simulate`/`force_xcover` ignored); stored XSS via policyholder name — escaped at render (payload renders as text, no element injected); `security_token` scrubbed from every JSON response including ledger history (`***` everywhere, ledger intact); create-offer fail-open budget 3 s (measured 3020 ms against blocked staging).
+
+**Ten documented as next steps** in README → "Red team", ordered: persistent ledger as a real unique index (also closes the concurrent-confirm race the Map can't), scheduled retry of pending confirms, cancel-timeout → treat "already cancelled" as success, auth on OMS/order endpoints, content-aware webhook dedup (no event id in the payload — ask CG), reconciliation job, products[] choice (A9), live captures replacing fixtures, regional price lists, small validations.
+
+**Manual:** my request — asked for a red-team pass and a README synthesis before submitting, so the panel reads the weaknesses from me rather than finding them.

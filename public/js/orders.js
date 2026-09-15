@@ -1,6 +1,7 @@
 // Orders view: the ledger as RealCheap's OMS would show it. Status is derived from the ledger, never guessed.
 
 const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const money = (n, c) => new Intl.NumberFormat(undefined, { style: "currency", currency: c || "USD" }).format(n);
 
 // Lifecycle labels, in the order the brief describes: offer created → confirmed → policy active → cancelled.
@@ -15,7 +16,7 @@ function pill(o) {
   const [label, cls] = STATUS[key] || [o.status, ""];
   const wh = o.booking && o.booking.last_webhook ? `<br><span class="small muted">via webhook ${o.booking.last_webhook.event}</span>` : "";
   const due = o.refund_due ? `<br><span class="call-status fail small">refund due ${money(o.refund_due.premium, o.refund_due.currency)}</span>` : "";
-  const err = o.confirm_error && !o.booking_id ? `<br><span class="call-status fail small" title="${o.confirm_error.error}">confirm failed</span><br><span class="small muted">${o.confirm_error.error}</span>` : "";
+  const err = o.confirm_error && !o.booking_id ? `<br><span class="call-status fail small" title="${esc(o.confirm_error.error)}">confirm failed</span><br><span class="small muted">${esc(o.confirm_error.error)}</span>` : "";
   return `<span class="call-status ${cls}">${label}</span>${wh}${due}${err}`;
 }
 

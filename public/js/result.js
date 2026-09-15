@@ -1,6 +1,7 @@
 // Result page: the order as the ledger knows it — line items, payment, and the XCover booking if there is one.
 
 const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const money = (n, c) => new Intl.NumberFormat(undefined, { style: "currency", currency: c }).format(n);
 const txn = new URLSearchParams(window.location.search).get("txn");
 
@@ -33,7 +34,7 @@ function render(o) {
         <dt>Booking</dt><dd><code>${b.id}</code></dd>
         <dt>Policy</dt><dd>${q && q.policy ? q.policy.policy_name : ""}</dd>
         <dt>Cover period</dt><dd>${q ? new Date(q.policy_start_date).toLocaleDateString() + " → " + new Date(q.policy_end_date).toLocaleDateString() : ""}</dd>
-        <dt>Policyholder</dt><dd>${b.policyholder.first_name} ${b.policyholder.last_name} · ${b.policyholder.email}${o.policyholder && o.policyholder.phone ? " · " + o.policyholder.phone : ""}</dd>
+        <dt>Policyholder</dt><dd>${esc(b.policyholder.first_name)} ${esc(b.policyholder.last_name)} · ${esc(b.policyholder.email)}${o.policyholder && o.policyholder.phone ? " · " + esc(o.policyholder.phone) : ""}</dd>
         <dt>Partner ref</dt><dd><code>${b.partner_transaction_id || "—"}</code> <span class="small muted">(echoed by XCover; routes BOOKING_* webhooks)</span></dd>
         <dt>Premium</dt><dd>${b.total_premium_formatted} <span class="small muted">(tax ${b.total_tax_formatted})</span></dd>
         <dt>Documents</dt><dd><a href="${b.coi.url}" target="_blank" rel="noopener">Certificate of insurance</a> · <a href="${b.pds_url}" target="_blank" rel="noopener">PDS</a></dd>
@@ -49,7 +50,7 @@ function render(o) {
     </section>` : o.protection === "accepted" && o.payment ? `
     <section class="policy-card pending">
       <h3>Protection plan <span class="call-status warn">PENDING CONFIRMATION</span></h3>
-      <p>You paid for a protection plan but XCover has not confirmed it yet${o.confirm_error ? ` — <em>${o.confirm_error.error}</em>` : ""}. Nothing exists on XCover's side until Confirm Offer succeeds, so this is retried until it does.</p>
+      <p>You paid for a protection plan but XCover has not confirmed it yet${o.confirm_error ? ` — <em>${esc(o.confirm_error.error)}</em>` : ""}. Nothing exists on XCover's side until Confirm Offer succeeds, so this is retried until it does.</p>
       <div class="demo-tools">
         <button type="button" id="confirmRetryBtn" class="buy-now-btn small-btn">Retry confirm now</button>
         <span class="small muted" id="confirmRetryMsg"></span>

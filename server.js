@@ -14,6 +14,21 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
+// Scrub secrets from anything that leaves the server as JSON (route responses and ledger history alike); the ledger itself is untouched.
+app.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => json(scrubSecrets(body));
+  next();
+});
+function scrubSecrets(v) {
+  if (Array.isArray(v)) return v.map(scrubSecrets);
+  if (v && typeof v === "object") {
+    const out = {};
+    for (const [k, val] of Object.entries(v)) out[k] = k === "security_token" ? "***" : scrubSecrets(val);
+    return out;
+  }
+  return v;
+}
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => { if (/\.(js|css)$/.test(req.path)) res.set("Cache-Control", "no-store"); next(); });
 app.use(express.static(path.join(__dirname, "public")));
@@ -91,7 +106,7 @@ app.post("/api/offers", async (req, res) => {
   // Fixture file by category (eligibility stand-in) and by requested currency (offer-response.<CUR>.json, USD default);
   // fresh offer/quote ids per call, as the real API returns.
   const fixture = product.category.startsWith("electronics/") ? `offer-response.${currency}.json` : "offer-response-ineligible.json";
-  const envelope = await xcover.call("POST", "offers/", offerRequest, fixture, {}, { fallbackFile: "offer-response.json", freshIds: true });
+  const envelope = await xcover.call("POST", "offers/", offerRequest, fixture, {}, { fallbackFile: "offer-response.json", freshIds: true, timeoutMs: Number(process.env.XCOVER_OFFER_TIMEOUT_MS || 3000) });
 
   // Ledger: remember what was quoted for this order, so confirm can be checked against it.
   const offer = envelope.ok && envelope.response && Array.isArray(envelope.response.products) ? envelope.response : null;
@@ -125,7 +140,10 @@ app.get("/api/orders", (req, res) => res.json(orders.list()));
 //   simulate: "409" | "423" — fixture mode only; stands in for XCover's duplicate replies so rule 4 can be shown.
 app.post("/api/orders/:txn/confirm", async (req, res) => {
   const txn = req.params.txn;
-  const { offer_id, quote_ids = [], policyholder = {}, simulate, force_xcover = false } = req.body || {};
+  const { offer_id, quote_ids = [], policyholder = {} } = req.body || {};
+  // `simulate` / `force_xcover` are demo hooks; ignored outright outside fixture mode.
+  const simulate = xcover.MODE === "fixture" ? (req.body || {}).simulate : undefined;
+  const force_xcover = xcover.MODE === "fixture" ? !!(req.body || {}).force_xcover : false;
   const order = orders.get(txn);
   if (!order) return res.status(404).json({ error: "unknown order", transaction_id: txn });
 
@@ -299,6 +317,9 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
 // genuinely traverses signature verification and routing. Body: { event: "BOOKING_CREATED"|"BOOKING_UPDATED"|
 // "BOOKING_CANCELLED", tamper?: true, omit_partner_txn?: true }. Also reachable from scripts/send-webhook.sh.
 app.post("/api/demo/webhook", async (req, res) => {
+  // Demo only. In live mode this endpoint must not exist: it signs with the real webhook secret and could inject
+  // a BOOKING_CANCELLED for any order — a forged-event vector, not a feature.
+  if (xcover.MODE !== "fixture") return res.status(404).json({ error: "demo endpoints are only available in XCOVER_MODE=fixture" });
   const { transaction_id, event = "BOOKING_CANCELLED", tamper = false, omit_partner_txn = false } = req.body || {};
   const order = orders.get(transaction_id);
   if (!order) return res.status(404).json({ error: "unknown order" });
@@ -356,10 +377,7 @@ app.post("/api/webhooks", async (req, res) => {
     // Signature validation (Important for production!)
     // XCOVER_WEBHOOK_KEY / XCOVER_WEBHOOK_SECRET are the pair you give your CSE when registering the listener URL.
     if (process.env.XCOVER_WEBHOOK_SECRET) {
-      const result = verifyXcoverWebhook(
-        req.headers,
-        process.env.XCOVER_WEBHOOK_SECRET,
-      );
+      const result = verifyXcoverWebhook(req.headers, process.env.XCOVER_WEBHOOK_SECRET, { expectedKeyId: process.env.XCOVER_WEBHOOK_KEY || null });
       if (!result.ok) {
         console.error("Signature validation failed:", result.reason);
         return res.status(401).send("Signature validation failed");

@@ -117,3 +117,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T10 — 2026-09-14 — Test Case 5: restart; Test Case 4 retest
 
 > Test Case 5 (restart → order gone) — PASS. Test Case 4 (refund, after the T9 fix) — works as well.
+
+## T11 — 2026-09-14 — Red team
+
+> Red team the solution and highlight fixes or considerations to improve further. Synthesize this to next steps or future improvements in the README.
