@@ -113,3 +113,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T9 — 2026-09-14 — Test Case 4: refund
 
 > On the result page a fixed US-dollar amount is used for the premium refund instead of the GBP equivalent that was paid: "Refunded $747.99 — product US$698.00 + premium US$49.99". Demo: re-send the same refund — PASS.
+
+## T10 — 2026-09-14 — Test Case 5: restart; Test Case 4 retest
+
+> Test Case 5 (restart → order gone) — PASS. Test Case 4 (refund, after the T9 fix) — works as well.

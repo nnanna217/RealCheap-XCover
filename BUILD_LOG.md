@@ -385,3 +385,26 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 **Verified:** GBP order, qty 2 → cancel reply `GBP £79.98`; refund record `$698.00 + £79.98`, `total: null`; USD order → `$398.99`, `total: 398.99`. Re-send refund confirmed by the candidate → ledger.
 
 **Manual:** *(candidate to fill.)*
+
+## T10 — 2026-09-14 — Test Case 5 + Test Case 4 retest — PASS (no change)
+
+Restart clears the ledger (in-memory, by design and documented); the refund now shows the premium in the currency it was charged in. **End of the end-to-end test stage.**
+
+### Test stage summary
+
+| Case | Scope | Result | Changes made |
+|---|---|---|---|
+| 1a | Eligibility (sleeve) | PASS | T1 — documented create-offer request shape; A1, A7, A8 |
+| 1b-i | Offer generation (laptop, qty, country) | PASS | T2 — per-currency fixtures, fresh ids per quote, echoed ids on confirm/cancel, quote count in OMS; A9 |
+| 1b-ii | Decline → opt-out | PASS | T3 — OMS plan line reads the decision, not the status (flicker) |
+| 2 | Accept → pay → confirm | PASS | T4 none; **T6 — a failed confirm is recorded, shown as pending, retryable (was silent)**; T7 — fixture echoes policyholder |
+| 2b | Retry confirm | PASS | T5 — confirm body per the guide (phone, `partner_transaction_id`, `payment_details`), price/errors validation, bypass-ledger demo |
+| 3 | Webhooks (applied / 401 / routed by booking id) | PASS | T8 — outcomes state how the event was routed |
+| 4 | Refund + repeat | PASS | T9 — cancel fixtures refund the quoted premium in its currency; record never sums across currencies |
+| 5 | Restart | PASS | — |
+
+**Two patterns across the ten entries, for the presentation:**
+1. **Four findings were the fixtures hiding reality** — identical ids on every quote (T2), one currency (T2), a placeholder policyholder (T7), a fixed refund amount (T9). Each was fixed by making fixture mode behave like the real API on that one axis (fresh ids, echoed request values, per-currency files), never by inventing pricing. Building against mocks is only as honest as the mocks.
+2. **Two findings came from reading the *guide* pages, not the OpenAPI blocks** — the create-offer request shape (T1) and the confirm body with `phone` / `partner_transaction_id` / `payment_details` (T5). The spec and the guides disagree in places; the second of those gaps would have broken webhook routing in production.
+
+And one that was neither: **T6**, the silent failed confirm — written on purpose, commented as resilience, found by noticing a log entry that wasn't there.
