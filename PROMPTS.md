@@ -101,3 +101,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T6 — 2026-09-14 — Test Case 2 revisited: confirm not called after payment
 
 > Something I missed in Test Case 2: after collection of payment, the Confirm endpoint was not called, and it does not show in the integration log either. Also, in the Confirm Offer guide, what does "You must make a request to the Confirm Offer endpoint to provision the product and distribute confirmation to the customer" mean?
+
+## T7 — 2026-09-14 — Test Case 2 retest + 2b
+
+> Retested Test Case 2 after restart: on payment the confirm endpoint now runs and shows in the Integration log — PASS. Noticed the response's `policyholder` differs from the request's; assume that's because the response comes from the fixture — confirm. Test Case 2b passes on both the ledger and the bypass calls.

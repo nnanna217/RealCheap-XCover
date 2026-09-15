@@ -355,3 +355,13 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 **Verified (script + browser):** stale-client confirm (no phone) → 400, `confirm_error` on the order, history `payment → confirm offer (rejected locally)`, OMS row *Paid · confirming / confirm failed / policyholder.phone is required* with Retry confirm; retry with phone → 200, booking, `confirm_error` cleared, OMS *Policy active*; `/js/checkout.js` served with `cache-control: no-store`.
 
 **Manual:** *(candidate to fill — this is the best "what did the agent get wrong" entry in the log: the agent wrote the silent path deliberately and commented it as a feature.)*
+
+## T7 — 2026-09-14 — Test Case 2 retest + 2b — PASS, one fixture fix (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T7.
+
+**Correct assumption.** The confirm fixture carries a placeholder `policyholder`; the adaptation echoed quote ids, `partner_transaction_id` and price but not the policyholder, so the response showed the fixture's name regardless of what was typed at checkout. A real confirm returns the policyholder that was sent. Fixed (`echoPolicyholder`, the four documented response fields). Consequence worth noting: the result page reads the policyholder from the booking, so before this fix the confirmation card would have named the placeholder even if the shopper had entered their own details.
+
+**Verified:** sent `Nnanna Eze · nnanna@example.com · CA` → booking `policyholder` returns the same four fields. 2b confirmed by the candidate on both layers (ledger 200 / bypass 409).
+
+**Manual:** *(candidate to fill.)*

@@ -171,7 +171,7 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   let envelope;
   for (let attempt = 1; attempt <= 3; attempt++) {
     envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key },
-      { echoQuoteIds: true, echoTxn: txn, echoPrice: { currency: order.offer_currency || "USD", unit: order.premium_unit || 0, quantity: order.quantity || 1 } });
+      { echoQuoteIds: true, echoTxn: txn, echoPolicyholder: true, echoPrice: { currency: order.offer_currency || "USD", unit: order.premium_unit || 0, quantity: order.quantity || 1 } });
     attempts.push({ attempt, status: envelope.status, elapsed_ms: envelope.elapsed_ms });
     if (envelope.status !== 423) break;
     await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
