@@ -41,7 +41,7 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Verified:** `npm start` boots; `GET /` serves (express.static answers with `index.html` before the redirect route — pre-existing behaviour, left alone); `GET /api/status` 200; `POST /api/webhooks` with a correctly signed request → 200 `[accepted]`, with a tampered signature → 401. `git grep -i adyen -- ':!*.md' ':!package-lock.json'` → none; lockfile → 0 matches.
 
-**Manual:** _(candidate to fill after reviewing the diff — what you changed or would change, and why.)_
+**Manual:** Chose to start from my own Adyen checkout demo and to strip Adyen rather than keep it dormant; kept the option to re-add it later as the PSP behind the Pay step. Accepted the three assumptions (webhook verifier swapped to XCover's scheme, two extra files touched, CORS shim removed).
 
 **Re-add Adyen later?** Yes, possible: payment collection is Single Payment on RealCheap's side per the XCover payment guide, so Adyen would only ever be the mock PSP behind the "Pay" button. Deliberately out of scope until the protection flow is complete.
 
@@ -61,7 +61,7 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Verified in a browser:** catalog shows three cards with the right prices; clicking the sleeve opens `product.html?sku=RC-SL-004` with its details; Buy Now lands on `checkout.html?sku=RC-SL-004&qty=1`; `?sku=DOES-NOT-EXIST` shows the inline error with a link back. Module loads under Node too (`findProduct` returns the product / `null`).
 
-**Manual:** _(candidate to fill after reviewing the diff.)_
+**Manual:** Specified the SKU mix myself — two unbranded laptops at $349/$549 and a $4 sleeve — so eligibility would be demonstrable, not a checkbox; deferred laptop image generation and accepted SVG placeholders.
 
 ## P3 — 2026-09-13 — Offer proxy, fixture mode (agent: Claude Code)
 
@@ -79,7 +79,7 @@ Stages are separated by `==================` lines and mirror `PROMPTS.md`: Stag
 
 **Verified:** fixture mode → 200, `mode:"fixture"`, request body shows `customer{CA/CAD}`, `context.items[0].quantity:2`, `order_total:1098`, headers redacted, fixture offer id and `$49.99` in the response. Missing sku → 400. **Live mode against the still-blocked staging** → 502 with `error:"timeout after 4000ms"`, `elapsed_ms:4002`, envelope intact — the failure path works before the success path has ever been seen.
 
-**Manual:** *(candidate to fill after reviewing the diff.)*
+**Manual:** Raised two design questions on this step — a relational store for the catalog (decided no: not on the rubric) and an OMS-style orders view (decided yes: it's where #4 and #6 become visible) — both recorded in TODO.md before moving on.
 
 ## 2026-09-13 — Correction: fixture and request rebuilt from the RETAIL schema (manual + agent)
 
@@ -118,7 +118,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified in a browser:** offer renders from the fixture with the API-supplied CTAs; accept adds the protection line and enables Continue (`$549 + $49.99 = $598.99`); qty 1→3 re-fetches and resets the decision; country US→DE re-fetches with `customer{de,EUR,DE}`; qty 2 → `$49.99 × 2 = $99.98`; three `POST /api/offers` observed for load/qty/country; **order ref identical across all re-quotes and a full page reload** (`sessionStorage`); server rejects a malformed `transaction_id` and mints a fresh one.
 
-**Manual:** *(candidate to fill after reviewing the diff.)*
+**Manual:** Directed the checkout's shape over four follow-ups: order summary as a line-items table, 60/40 column split, equal-height columns, Recommended badge on the card border, accept/decline on one row. Clicked through the Germany case and saw the currency relabel before it was fixed.
 
 ## P4b — 2026-09-13 — Checkout explainability (agent: Claude Code)
 
@@ -129,7 +129,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified in a browser:** qty 2 accepted → rows `2 × $549.00 = $1,098.00` and `2 × $49.99 = $99.98`, total `$1,197.98`; declined → declined row, total `$1,098.00`, the API's `negative_cta_warning` shown; badge visible at the top of the offer column; layout holds at 1024px.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My change request — the table and badge were for explainability in the room, so a panelist can read the price stack at a glance.
 
 ## P5 — 2026-09-13 — Payload panel (agent: Claude Code)
 
@@ -146,14 +146,14 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified in a browser:** fixture mode → badge `FIXTURE` (amber), entry `create offer · POST /xcover/partners/E3CCM/offers/ · HTTP 200 · 0 ms · fixture`, request headers show `X-Api-Key: "***"`, `Authorization: "***"`, request body and fixture response side by side, response column inside the panel bounds. Live mode against the still-blocked staging → badge `LIVE` (green), entry shows `error · timeout after 3000ms · 3003 ms`, offer column resolves, Continue enabled.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** Asked for the panel per the brief's third must-have; later verified in testing that headers were redacted and the FIXTURE badge shown (T1).
 
 ## P5b — 2026-09-13 — Equal-height columns (agent: Claude Code)
 
 **Asked:** see `PROMPTS.md` P5b.
 **Changed:** four CSS lines. The order summary had `height: fit-content` from the original template, which opted it out of the grid's default stretch; removed for the checkout grid, and the offer column made a flex column so the offer card fills to the shared bottom edge.
 **Verified in a browser:** both columns top 246 / bottom 1201 at 1024px.
-**Manual:** *(candidate to fill.)*
+**Manual:** My change request.
 
 ## P5c — 2026-09-13 — 60/40 columns (agent: Claude Code)
 
@@ -180,7 +180,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified in a browser:** sleeve → integration log `HTTP 422`, offer column "Not available for this item", table row "Protection Plan — Not available for this item — $0.00", total $4.00, Continue enabled. Laptop → offer as before. Live mode against blocked staging → "temporarily unavailable" wording, row "Temporarily unavailable", Continue enabled, log `error · timeout`.
 
-**Manual:** *(candidate to fill — the catch itself was the manual intervention.)*
+**Manual:** My catch: re-tested the sleeve after P5 and found it still quoted a plan; asked for it to be built properly rather than accepting the deferral.
 
 ## P7 — 2026-09-13 — Confirm + ledger, idempotency rules 2–4 (agent: Claude Code)
 
@@ -198,7 +198,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 **Verified (curl script + browser):** pay → `paid`, 598.99; confirm #1 → `served_from xcover`, key `6596de52-…` sent as the header, booking `8AMKH-KQ8NR-INS`, status `confirmed`; confirm #2 identical → `served_from ledger`, XCover not called; simulated 409 → `replayed true, treated_as_success true`, booking stored; simulated 423 → attempts `[423, 423, 200]`; wrong `offer_id` → 409; unknown order → 404. Browser: accept → Continue → Pay → result page with booking and both log entries; retry button → ledger answer, log count unchanged (no new XCover call). The candidate's own `sessionStorage` order ref from an earlier session survived a server restart because the quote re-registered it — worth knowing: the ledger is per-process, the order ref is per-browser.
 
 **Not done here:** rule 5 (cancel) and the opt-out call on decline — next.
-**Manual:** *(candidate to fill.)*
+**Manual:** Before letting the build move on, asked whether the idempotency and UUID v5 rules were actually implemented — only rule 1 was. This step exists because of that check.
 
 ## P8 — 2026-09-13 — Cancel path, consideration #4 / rule 5 (agent: Claude Code)
 
@@ -216,7 +216,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified (script + browser):** return → preview 200, cancel 200, refund `$398.99 = 349.00 + 49.99`, status `cancelled`, booking `CANCELLED`; duplicate return → `served_from: ledger`, zero XCover calls, log count unchanged; unpaid order → 409; paid-no-plan → product-only refund, zero XCover calls. History reads `create offer → payment → confirm offer → cancel booking (preview) → cancel booking → refund`.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** Asked what consideration #4 actually meant in context before accepting the design; then confirmed the refund/repeat behaviour by clicking through in testing (T9, T10).
 
 ## P9 — 2026-09-13 — Opt-out on decline (agent: Claude Code)
 
@@ -228,7 +228,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified (script + browser):** opt-out → `204`, status `declined`; repeat → `served_from: ledger`; ineligible order → 409. Browser: decline → Continue → integration log shows `opt out … HTTP 204` beneath the create-offer entry; Pay button reads `$549.00`; table row "Protection Plan — Declined — $0.00". The panel now prints "(no body)" / "(204 No Content)" instead of `null` for body-less calls.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** Accepted the decision that a decline is reported when frozen at Continue, not on the click; verified the 204 in testing (T3).
 
 ## P10 — 2026-09-13 — BOOKING_* webhooks, consideration #6 (agent: Claude Code)
 
@@ -252,7 +252,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified (script, 8 cases + browser):** applied / duplicate / cancelled+refund_due / stale / null-txn fallback / 401 / unmatched / stored_unhandled; history reads `… confirm offer → webhook BOOKING_CREATED(applied) → …(duplicate) → webhook BOOKING_CANCELLED(applied) → …(stale) → webhook CLAIM_STATUS_UPDATED(stored_unhandled)`. Browser: result page → simulate `BOOKING_CANCELLED` → table row `BOOKING_CANCELLED (simulated) · partner_transaction_id · applied`, policy pill `CANCELLED`, refund-due banner `US$49.99`, inbound entry in the integration log.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** Specified the scope myself — route BOOKING_CREATED/CANCELLED by partner_transaction_id into the ledger, a way to simulate an inbound event, and a step-by-step doc — and later ran all three simulator cases (T8).
 
 ## P11 — 2026-09-13 — Orders view (agent: Claude Code)
 
@@ -266,7 +266,7 @@ The retail create-offer doc says the CSE provides the identifier *and* that the 
 
 **Verified in a browser:** six seeded orders render in five distinct states including one moved by webhook; on a paid+confirmed order, Re-send confirm → *served_from: ledger*, attempts `2 (XCover 1, ledger 1)`; Refund → cancelled with XCover, one refund, status Cancelled; Refund again → *served_from: ledger*, `refund: 2 (XCover 1, ledger 1)`; unmatched booking listed in the reconciliation section; unpaid confirm → 409.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** Specified the scope myself — a Map and a table, plan as a line item, status that moves, home for Refund, idempotency visible — and required the whole system be tested end to end before submission.
 
 ==================
 # Stage 2 — Testing (from 2026-09-14)
@@ -288,7 +288,7 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Verified:** sleeve on a mobile UA from Canada → request shows the full documented shape (`device: "mobile"`, `merchant_id: REALCHEAP-ONLINE-CA`, `warranty{}`), XCover fixture still answers `422 offer_quote_generation_failed`.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test and my grounding: ran the sleeve case, compared the request body against the product-retail create-offer page and the 422 against error-versioning, and asked which 422 applied and why.
 
 ## T2 — 2026-09-14 — Test Case 1b-i: offer generation (agent: Claude Code)
 
@@ -302,7 +302,7 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Verified (script + browser):** three quotes under one order ref; offer id differs per quote; Germany premium `EUR €45.99` vs USD `$49.99`; ledger `quote_count 3, superseded 2`; confirm with the first (stale) offer id → 409, with the latest → booking whose quotes echo our quote id and whose `partner_transaction_id` is ours. Browser: Germany row `2 × €45.99 = €91.98`, total `US$1,098.00 + €91.98`, two log entries with different offer ids.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test: noticed the offer/quote ids flickering behind the mask and asked whether they were the same across re-quotes — they were, and that turned out to be the fixture misleading us. Also flagged the Germany currency and the one-line-item reading.
 
 ## T3 — 2026-09-14 — Test Case 1b-ii: decline → opt-out (agent: Claude Code)
 
@@ -314,7 +314,7 @@ The build is feature-complete against the brief's six considerations. This stage
 
 **Verified:** ledger after opt-out → `declined / protection declined / opt_out true`; after pay → `paid_no_protection / protection declined / opt_out true`; OMS row reads "Protection Plan — declined (opt-out sent)", pill "Paid · plan declined", Attempts `opt-out: 1 (XCover called 1, ledger 0)`; unchanged across an auto-refresh cycle.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test: caught the declined/undecided flicker in the OMS on auto-refresh.
 
 ## T4 — 2026-09-14 — Test Case 2: accept → pay → confirm — PASS (no change)
 
@@ -336,7 +336,7 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Verified:** no phone → 400; body keys `quotes, policyholder, partner_transaction_id, payment_details`, `partner_transaction_id` = our order ref, `payment_details.transaction_id = PAY-…`; Germany qty 2 → confirmed `EUR 91.98` = quoted `€45.99 × 2`, `needs_review: none`; repeat → `ledger`, XCover not called; repeat with bypass → XCover `409`, `replayed true`, `treated_as_success true`, same booking, **same `x-idempotency-key` as the first call**.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test and my grounding: questioned why a retry returned 200 when the guide says 409, and asked for the request/response fields to be re-checked against the Confirm Offer guide — which surfaced phone, partner_transaction_id and payment_details.
 
 ## T6 — 2026-09-14 — Test Case 2 revisited: confirm silently not called (agent: Claude Code)
 
@@ -354,7 +354,7 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Verified (script + browser):** stale-client confirm (no phone) → 400, `confirm_error` on the order, history `payment → confirm offer (rejected locally)`, OMS row *Paid · confirming / confirm failed / policyholder.phone is required* with Retry confirm; retry with phone → 200, booking, `confirm_error` cleared, OMS *Policy active*; `/js/checkout.js` served with `cache-control: no-store`.
 
-**Manual:** *(candidate to fill — this is the best "what did the agent get wrong" entry in the log: the agent wrote the silent path deliberately and commented it as a feature.)*
+**Manual:** My catch, and the most important one: noticed after payment that the confirm call was missing from the Integration log, and asked what the guide's 'provision the product' sentence meant. The agent had written the silent path on purpose.
 
 ## T7 — 2026-09-14 — Test Case 2 retest + 2b — PASS, one fixture fix (agent: Claude Code)
 
@@ -364,7 +364,7 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Verified:** sent `Nnanna Eze · nnanna@example.com · CA` → booking `policyholder` returns the same four fields. 2b confirmed by the candidate on both layers (ledger 200 / bypass 409).
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test: spotted the response policyholder not matching the request and asked whether it was the fixture — it was.
 
 ## T8 — 2026-09-14 — Test Case 3: webhooks — PASS, explanation + clarity fix (agent: Claude Code)
 
@@ -374,7 +374,7 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Changed for clarity, not behaviour:** the handler's response and every outcome note now say `routed by <field>` explicitly, so the demo message reads "routed by booking_id; same event already applied…" without needing the table. README step 3 says to run the null-txn case first on a fresh order to see `applied`, and why it otherwise reads `duplicate`.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test: ran all three webhook cases and correctly diagnosed that the null-partner_transaction_id run came back 'duplicate' because it had been routed by booking id to an order that already had the event.
 
 ## T9 — 2026-09-14 — Test Case 4: refund (agent: Claude Code)
 
@@ -384,7 +384,7 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 
 **Verified:** GBP order, qty 2 → cancel reply `GBP £79.98`; refund record `$698.00 + £79.98`, `total: null`; USD order → `$398.99`, `total: 398.99`. Re-send refund confirmed by the candidate → ledger.
 
-**Manual:** *(candidate to fill.)*
+**Manual:** My test: caught the refund showing a fixed US-dollar premium on a GBP order.
 
 ## T10 — 2026-09-14 — Test Case 5 + Test Case 4 retest — PASS (no change)
 
