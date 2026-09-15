@@ -31,12 +31,7 @@ Manual signed calls: `scripts/xcover-curl.sh POST offers/ '<json>'` (reads `.env
 
 XCover signs each webhook with the key/secret pair you register through your CSE and retries up to 3 times on a non-200. Registering a real listener needs a public URL, so the prototype ships a simulator that builds the **documented** `BOOKING_*` payload from the ledger, signs it **exactly as XCover would** (HMAC over the `Date` header, secret from `.env`), and delivers it to this server's own `/api/webhooks` — the request genuinely traverses signature verification and routing.
 
-1. Put a shared secret in `.env` (any string — it stands in for the pair you'd register with the CSE):
-   ```
-   XCOVER_WEBHOOK_KEY=realcheap-demo-key
-   XCOVER_WEBHOOK_SECRET=realcheap-demo-webhook-secret
-   ```
-   and restart `npm start`. Without a secret the handler skips verification (with a warning) and the simulator refuses to run.
+1. `.env.example` ships a demo key/secret pair (`XCOVER_WEBHOOK_KEY` / `XCOVER_WEBHOOK_SECRET`) — it stands in for the pair you'd register with the CSE, and any value works because the simulator signs and the handler verifies with the same one. If you removed it, put any string back and restart; without a secret the handler skips verification (with a warning) and the simulator refuses to run.
 2. Create a booking: catalog → laptop → checkout → **Yes, protect my laptop** → Continue → Pay. Note the order ref (`RC-…`) on the result page.
 3. **From the result page:** in "Webhooks from XCover", pick an event and click **Demo: simulate this webhook**. The table shows what was received, how it was routed (`partner_transaction_id` or `booking_id`) and the outcome; the integration log below shows the raw event. Tick **bad signature** to see a 401; tick **null partner_transaction_id** (the docs' own examples send null) to see routing fall back to the booking id — do this one **first** on a fresh order if you want the outcome to read `applied`; on an order that already received the same event it reads `duplicate` (routed by booking id, then deduped — the dedup key ignores `partner_transaction_id` on purpose, since the event is the same either way).
 4. **Or from a terminal:**
