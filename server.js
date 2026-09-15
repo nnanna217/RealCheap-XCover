@@ -371,7 +371,7 @@ app.post("/api/webhooks", async (req, res) => {
 
     // Always return 200 to acknowledge receipt
     // This tells XCover to stop retrying this webhook
-    res.status(200).json({ accepted: true, outcome: result.outcome, key: result.key, note: result.note });
+    res.status(200).json({ accepted: true, outcome: result.outcome, routed_by: result.matched_by || null, key: result.key, note: result.note });
   } catch (error) {
     console.error("Error processing webhook:", error);
     // Return 500 so XCover will retry the webhook

@@ -38,7 +38,7 @@ XCover signs each webhook with the key/secret pair you register through your CSE
    ```
    and restart `npm start`. Without a secret the handler skips verification (with a warning) and the simulator refuses to run.
 2. Create a booking: catalog → laptop → checkout → **Yes, protect my laptop** → Continue → Pay. Note the order ref (`RC-…`) on the result page.
-3. **From the result page:** in "Webhooks from XCover", pick an event and click **Demo: simulate this webhook**. The table shows what was received, how it was routed (`partner_transaction_id` or `booking_id`) and the outcome; the integration log below shows the raw event. Tick **bad signature** to see a 401; tick **null partner_transaction_id** (the docs' own examples send null) to see routing fall back to the booking id.
+3. **From the result page:** in "Webhooks from XCover", pick an event and click **Demo: simulate this webhook**. The table shows what was received, how it was routed (`partner_transaction_id` or `booking_id`) and the outcome; the integration log below shows the raw event. Tick **bad signature** to see a 401; tick **null partner_transaction_id** (the docs' own examples send null) to see routing fall back to the booking id — do this one **first** on a fresh order if you want the outcome to read `applied`; on an order that already received the same event it reads `duplicate` (routed by booking id, then deduped — the dedup key ignores `partner_transaction_id` on purpose, since the event is the same either way).
 4. **Or from a terminal:**
    ```bash
    scripts/send-webhook.sh RC-XXXXXXXX-XXXXXX BOOKING_CANCELLED

@@ -105,3 +105,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T7 — 2026-09-14 — Test Case 2 retest + 2b
 
 > Retested Test Case 2 after restart: on payment the confirm endpoint now runs and shows in the Integration log — PASS. Noticed the response's `policyholder` differs from the request's; assume that's because the response comes from the fixture — confirm. Test Case 2b passes on both the ledger and the bypass calls.
+
+## T8 — 2026-09-14 — Test Case 3: webhooks
+
+> BOOKING_CANCELLED, both boxes unchecked → routed via partner_transaction_id, outcome applied. Bad signature → signature mismatch, HTTP 401. Null partner_transaction_id only → signature passed, outcome duplicate, "same event already applied; acknowledged, not re-applied". Does the duplicate occur because of the routing done via the booking id? I believe yes.

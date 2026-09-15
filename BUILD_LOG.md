@@ -365,3 +365,13 @@ Candidate reports the accept → Continue → policyholder → Pay (simulated) �
 **Verified:** sent `Nnanna Eze · nnanna@example.com · CA` → booking `policyholder` returns the same four fields. 2b confirmed by the candidate on both layers (ledger 200 / bypass 409).
 
 **Manual:** *(candidate to fill.)*
+
+## T8 — 2026-09-14 — Test Case 3: webhooks — PASS, explanation + clarity fix (agent: Claude Code)
+
+**Asked:** see `PROMPTS.md` T8. All three outcomes as designed.
+
+**The candidate's read is correct.** With `partner_transaction_id` null the event was routed by **booking id** to the same order; the dedup key is derived from `(event, booking id, status, quote statuses)` and deliberately **excludes** `partner_transaction_id` — a `BOOKING_CANCELLED` for a booking is the same event whether or not XCover filled that field — so it matched the first test's key and was deduped. Two mechanisms, in sequence: fallback routing found the order, dedup refused to apply it twice. The evidence of the fallback was in the table's *Routed by* column (`booking_id` vs `partner_transaction_id`), not in the outcome.
+
+**Changed for clarity, not behaviour:** the handler's response and every outcome note now say `routed by <field>` explicitly, so the demo message reads "routed by booking_id; same event already applied…" without needing the table. README step 3 says to run the null-txn case first on a fresh order to see `applied`, and why it otherwise reads `duplicate`.
+
+**Manual:** *(candidate to fill.)*
