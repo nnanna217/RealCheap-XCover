@@ -29,20 +29,36 @@ Manual signed calls: `scripts/xcover-curl.sh POST offers/ '<json>'` (reads `.env
 
 ## Layout
 
-- `server.js` — Express: serves `public/`, proxies XCover calls (secrets stay server-side), receives XCover webhooks
-- `lib/xcover-auth.js` — request signing (HMAC-SHA512 over the `Date` header, per the XCover docs) and inbound webhook verification
-- `lib/xcover-client.js` — one `call()` for every XCover endpoint; fixture/live switch, timeout, and the request/response envelope the UI shows (secrets redacted)
-- `lib/idempotency.js` — derived `x-idempotency-key` (UUID v5 of the natural key) for confirm / cancel
-- `lib/orders.js` — the in-memory order ledger keyed by `transaction_id`; every XCover call and webhook is appended to the order's history
-- `lib/webhooks.js` — inbound `BOOKING_*` routing, dedup, ordering guard
-- `scripts/send-webhook.sh` — simulate a signed inbound webhook for an order
-- `public/` — catalog (`index.html`), product, checkout, result pages, and `orders.html` (the OMS view of the ledger: one row per order, plan as a line item, status lifecycle, attempts vs. XCover calls, Refund / re-send-confirm actions); plain HTML/JS, no build step
-- `public/js/products.js` — the three-SKU catalog, shared by browser and server
-- `fixtures/` — recorded XCover replies used in fixture mode: offer responses per currency (`offer-response.<CUR>.json`), the documented 422 for an ineligible SKU, confirm (200 / 409 / 423), cancel preview and cancel, opt-out. Structure follows the specs; values are placeholders. In fixture mode the client mints fresh offer/quote ids per call and echoes request ids on confirm/cancel, as the real API does
-- `CLAUDE.md` — the guidelines the coding agent worked under, plus the brief's goals, the six technical considerations as verifiable goals, non-goals, invariants, and the idempotency rules
-- `PROMPTS.md` — every prompt given to the agent, verbatim, in order
-- `BUILD_LOG.md` — what each prompt produced, what was wrong, what was fixed by hand
-- `TODO.md` — decisions deliberately deferred, with reasons
+**The app** — Express + plain HTML/JS, no build step.
+
+| Path | What it is |
+|---|---|
+| `server.js` | Routes: serves `public/`, proxies every XCover call (secrets stay server-side), receives XCover webhooks, hosts the order ledger endpoints |
+| `public/index.html` → `product.html` → `checkout.html` → `result.html` | The RealCheap storefront: catalog, product, checkout with the protection offer, confirmation |
+| `public/orders.html` | The OMS view of the ledger: one row per order, plan as a line item, status lifecycle, attempts vs. XCover calls, Refund / retry actions |
+| `public/js/products.js` | The three-SKU catalog, shared by browser and server |
+| `public/js/panel.js` | The Integration log shown on checkout and result pages |
+
+**The XCover integration** — `lib/`.
+
+| File | Responsibility |
+|---|---|
+| `xcover-auth.js` | Request signing (HMAC-SHA512 over the `Date` header, per the docs) and inbound webhook verification (signature, freshness window, `keyId`) |
+| `xcover-client.js` | One `call()` for every endpoint: fixture/live switch, per-call timeout, the redacted request/response envelope |
+| `idempotency.js` | `x-idempotency-key` derived as UUID v5 of the natural key, for confirm and cancel |
+| `orders.js` | The in-memory order ledger keyed by `transaction_id`; every XCover call and webhook is appended to the order's history |
+| `webhooks.js` | Inbound `BOOKING_*` routing (by `partner_transaction_id`, fallback booking id), dedup, ordering guard, refund-due flag |
+| `fixtures/` | Recorded XCover replies for fixture mode: offers per currency, the documented 422, confirm 200/409/423, cancel, opt-out. Structure from the specs, values placeholders; fresh ids and echoed request values per call |
+| `scripts/` | `xcover-curl.sh` (signed manual call), `send-webhook.sh` (signed simulated webhook) |
+
+**How it was built** — the record for the AI-methodology discussion.
+
+| File | Contents |
+|---|---|
+| `CLAUDE.md` | The guidelines the agent worked under, the brief's goals, the six considerations as verifiable goals, assumptions A1–A9, invariants, idempotency rules |
+| `PROMPTS.md` | Every prompt given to the agent, verbatim, in order — build stage and test stage |
+| `BUILD_LOG.md` | What each prompt produced, what was wrong, what was fixed by hand; test findings; a summary table |
+| `TODO.md` | Decisions deliberately deferred, with reasons; known limitations |
 
 ## Simulating an inbound XCover webhook (consideration #6)
 
