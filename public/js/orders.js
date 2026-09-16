@@ -35,8 +35,8 @@ function attempts(o) {
 function lineItems(o) {
   const product = `<div>${o.product_name || "—"} <span class="muted">× ${o.quantity || 1}</span><br><span class="small muted">SKU ${o.sku} · ${money((o.unit_price || 0) * (o.quantity || 1))}</span></div>`;
   let plan;
-  if (o.premium_unit && (o.protection === "accepted" || o.booking_id)) {
-    plan = `<div class="plan-line">Protection Plan <span class="muted">× ${o.quantity}</span><br><span class="small muted">Premium · XCover · ${money(o.premium_unit * o.quantity, o.offer_currency)}</span></div>`;
+  if (o.premium_total && (o.protection === "accepted" || o.booking_id)) {
+    plan = `<div class="plan-line">${esc(o.plan_title || "Protection Plan")} <span class="muted">· covers ${o.quantity}</span><br><span class="small muted">Premium · XCover · ${money(o.premium_total, o.offer_currency)}</span></div>`;
   } else if (o.opt_out || o.protection === "declined") plan = `<div class="plan-line muted small">Protection Plan — declined${o.opt_out ? " (opt-out sent)" : ""}</div>`;
   else if (o.status === "no_offer" || !o.offer_id) plan = `<div class="plan-line muted small">Protection Plan — not offered</div>`;
   else plan = `<div class="plan-line muted small">Protection Plan — undecided</div>`;
@@ -45,7 +45,7 @@ function lineItems(o) {
 
 function ids(o) {
   const c = (v) => (v ? `<code title="${v}">${v.length > 14 ? v.slice(0, 8) + "…" + v.slice(-4) : v}</code>` : '<span class="muted">—</span>');
-  return `<div class="ids small"><div>offer ${c(o.offer_id)}${o.superseded_offer_ids && o.superseded_offer_ids.length ? ' <span class="muted">(latest)</span>' : ""}</div><div>quote ${c(o.quote_ids && o.quote_ids[0])}</div><div>booking ${c(o.booking_id)}</div>${o.idempotency_key ? `<div>idem-key ${c(o.idempotency_key)}</div>` : ""}</div>`;
+  return `<div class="ids small"><div>offer ${c(o.offer_id)}${o.superseded_offer_ids && o.superseded_offer_ids.length ? ' <span class="muted">(latest)</span>' : ""}</div><div>quote ${c((o.confirmed_quote_ids || o.quote_ids || [])[0])}${o.quote_ids && o.quote_ids.length > 1 ? ` <span class="muted">(${o.quote_ids.length} plans offered)</span>` : ""}</div><div>booking ${c(o.booking_id)}</div>${o.idempotency_key ? `<div>idem-key ${c(o.idempotency_key)}</div>` : ""}</div>`;
 }
 
 function actions(o) {

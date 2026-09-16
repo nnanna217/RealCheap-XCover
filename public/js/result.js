@@ -14,7 +14,7 @@ async function load() {
 function render(o) {
   const b = o.booking;
   const q = b && b.quotes && b.quotes[0];
-  const premium = o.protection === "accepted" && o.premium_unit ? o.premium_unit * o.quantity : 0;
+  const premium = o.protection === "accepted" && o.premium_total ? o.premium_total : 0;
   $("result").innerHTML = `
     <h2>${o.refund ? "Order returned and refunded" : b && b.status === "CANCELLED" ? "Order confirmed — protection plan cancelled" : b ? "Order confirmed — your laptop is protected" : o.protection === "accepted" && o.payment ? "Order confirmed — protection plan pending" : "Order confirmed"}</h2>
     <p class="muted">Order ref <code>${o.transaction_id}</code> · ${o.payment ? `paid ${money(o.payment.amount, "USD")} (simulated)` : "unpaid"}</p>
@@ -23,7 +23,7 @@ function render(o) {
       <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
       <tbody>
         <tr><td>${o.product_name}<br><span class="small muted">SKU ${o.sku}</span></td><td class="num">${o.quantity}</td><td class="num">${money(o.unit_price, "USD")}</td><td class="num">${money(o.unit_price * o.quantity, "USD")}</td></tr>
-        ${o.protection === "accepted" && o.premium_unit ? `<tr class="premium"><td>Protection Plan<br><span class="small muted">Premium · XCover</span></td><td class="num">${o.quantity}</td><td class="num">${money(o.premium_unit, o.offer_currency || "USD")}</td><td class="num">${money(premium, o.offer_currency || "USD")}</td></tr>` : ""}
+        ${o.protection === "accepted" && o.premium_total ? `<tr class="premium"><td>${esc(o.plan_title || "Protection Plan")}<br><span class="small muted">Premium · XCover · covers ${o.quantity} item${o.quantity > 1 ? "s" : ""}</span></td><td class="num">${o.quantity}</td><td class="num">${money(o.premium_total / o.quantity, o.offer_currency || "USD")}</td><td class="num">${money(premium, o.offer_currency || "USD")}</td></tr>` : ""}
       </tbody>
     </table>
 
@@ -32,11 +32,11 @@ function render(o) {
       <h3>Protection plan <span class="call-status ${b.status === "CANCELLED" ? "fail" : "ok"}">${b.status}</span></h3>
       <dl class="policy-facts">
         <dt>Booking</dt><dd><code>${b.id}</code></dd>
-        <dt>Policy</dt><dd>${q && q.policy ? q.policy.policy_name : ""}</dd>
-        <dt>Cover period</dt><dd>${q ? new Date(q.policy_start_date).toLocaleDateString() + " → " + new Date(q.policy_end_date).toLocaleDateString() : ""}</dd>
+        <dt>Policy</dt><dd>${esc(o.plan_title || "")}${q && q.policy ? ` <span class="small muted">· ${esc(q.policy.policy_name)}</span>` : ""}</dd>
+        <dt>Cover period</dt><dd>${q ? new Date(q.policy_start_date).toLocaleDateString() + " → " + (q.policy_end_date ? new Date(q.policy_end_date).toLocaleDateString() : "<span class=\"muted\">end date not set by staging</span>") : ""}</dd>
         <dt>Policyholder</dt><dd>${esc(b.policyholder.first_name)} ${esc(b.policyholder.last_name)} · ${esc(b.policyholder.email)}${o.policyholder && o.policyholder.phone ? " · " + esc(o.policyholder.phone) : ""}</dd>
         <dt>Partner ref</dt><dd><code>${b.partner_transaction_id || "—"}</code> <span class="small muted">(echoed by XCover; routes BOOKING_* webhooks)</span></dd>
-        <dt>Premium</dt><dd>${b.total_premium_formatted} <span class="small muted">(tax ${b.total_tax_formatted})</span></dd>
+        <dt>Premium</dt><dd>${b.total_price_formatted || b.total_premium_formatted} <span class="small muted">(${b.total_premium_formatted} + tax ${b.total_tax_formatted})</span></dd>
         <dt>Documents</dt><dd><a href="${b.coi.url}" target="_blank" rel="noopener">Certificate of insurance</a> · <a href="${b.pds_url}" target="_blank" rel="noopener">PDS</a></dd>
         <dt>Claims</dt><dd><a href="${b.fnol_link}" target="_blank" rel="noopener">Make a claim</a> <span class="small muted">(first notice of loss — handled by XClaim)</span></dd>
         <dt>Idempotency key</dt><dd><code class="small">${o.idempotency_key}</code></dd>
@@ -79,8 +79,8 @@ function render(o) {
     <section class="refund-card">
       <h3>Returns</h3>
       ${o.refund ? `
-        <p><strong>Refunded ${o.refund.total_formatted}</strong> on ${new Date(o.refund.at).toLocaleString()} — product ${money(o.refund.product_amount, o.refund.product_currency || "USD")}${o.refund.premium_amount ? ` + premium ${money(o.refund.premium_amount, o.refund.premium_currency || "USD")} (XCover-calculated${o.refund.xcover_cancellation && o.refund.xcover_cancellation.refund && o.refund.xcover_cancellation.refund.within_cooling_off_period ? ", within cooling-off" : ""})` : ""}. One refund, recorded once${o.refund.total === null ? " — two currencies, two settlements" : ""}.</p>
-        ${b && b.status === "CANCELLED" ? `<p class="small muted">Booking <code>${b.id}</code> is CANCELLED with XCover.</p>` : ""}` : `
+        <p><strong>Refunded ${o.refund.total_formatted}</strong> on ${new Date(o.refund.at).toLocaleString()} — product ${money(o.refund.product_amount, o.refund.product_currency || "USD")}${o.refund.premium_amount ? ` + premium ${money(o.refund.premium_amount, o.refund.premium_currency || "USD")} (XCover-calculated${o.refund.xcover_cancellation && o.refund.xcover_cancellation.cooling_off_until && new Date(o.refund.xcover_cancellation.cooling_off_until) > new Date(o.refund.at) ? ", within cooling-off" : ""})` : ""}. One refund, recorded once${o.refund.total === null ? " — two currencies, two settlements" : ""}.</p>
+        ${b && b.status === "CANCELLED" ? `<p class="small muted">Booking <code>${b.id}</code> is CANCELLED with XCover${o.refund.xcover_cancellation && o.refund.xcover_cancellation.cooling_off_until ? ` (cooling-off until ${new Date(o.refund.xcover_cancellation.cooling_off_until).toLocaleDateString()})` : ""}.</p>` : ""}` : `
         <p class="small muted">Returning the item refunds the product and, if a plan was bought, cancels it with XCover and refunds the premium XCover calculates — as one refund.</p>`}
       <div class="demo-tools">
         <button type="button" id="refundBtn" class="btn-secondary">${o.refund ? "Demo: re-send the same refund" : "Return item & refund"}</button>

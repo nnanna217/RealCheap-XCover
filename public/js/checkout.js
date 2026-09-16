@@ -13,6 +13,7 @@ const state = {
   envelope: null,      // most recent request/response envelope
   calls: [],           // every envelope this page produced, for the integration log
   protection: "undecided", // undecided | accepted | declined
+  planIndex: 0,            // which of offer.products the shopper chose (A9 settled: staging returns two plans)
   noOfferReason: null, // null | "ineligible" (XCover answered no) | "unavailable" (XCover unreachable)
   quoting: false,      // true while a create-offer call is in flight
 };
@@ -83,20 +84,35 @@ function renderOffer() {
     return;
   }
   const { content = {}, products } = state.offer;
-  const p = products[0];
+  state.planIndex = Math.min(state.planIndex, products.length - 1);
+  const p = products[state.planIndex];
   const price = p.details.finance.price;
-  const benefits = (p.details.benefits || [])
-    .map((b) => `<li><strong>${b.title || ""}</strong>${b.description ? " — " + b.description : ""}</li>`)
-    .join("");
+  // Live shape: the human title lives in content.products[] (matched by id); products[].name is the config slug.
+  const titleOf = (prod) => ((content.products || []).find((c) => c.id === prod.id) || {}).title || prod.name || "Protection Plan";
+  // Live shape: benefits arrive as content.extras { "Breakdowns": "…", … }; details.benefits[] is empty on staging.
+  const extras = content.extras && Object.keys(content.extras).length ? content.extras : null;
+  const benefits = extras
+    ? Object.entries(extras).map(([k, v]) => `<li><strong>${k}</strong> — ${v}</li>`).join("")
+    : (p.details.benefits || []).map((b) => `<li><strong>${b.title || ""}</strong>${b.description ? " — " + b.description : ""}</li>`).join("");
   const pds = p.details.pds_url ? `<a href="${p.details.pds_url}" target="_blank" rel="noopener">Policy Disclosure Statement</a>` : "";
+  const subHeading = content.sub_heading && content.sub_heading !== "N/A" ? content.sub_heading : ""; // staging sends "N/A"
+  const planPicker = products.length > 1 ? `
+    <div class="plan-picker">${products.map((prod, i) => `
+      <label class="plan-option ${i === state.planIndex ? "selected" : ""}">
+        <input type="radio" name="plan" value="${i}" ${i === state.planIndex ? "checked" : ""}>
+        <span class="plan-title">${titleOf(prod)}</span>
+        <span class="plan-price">${prod.details.finance.price.total_amount_formatted}</span>
+      </label>`).join("")}
+    </div>` : "";
 
   el.innerHTML = `
     <span class="badge">Recommended</span>
     <h2>${content.heading || "Protection Plan"}</h2>
-    <p class="offer-sub">${content.sub_heading || p.name || ""}</p>
-    <p>${content.description || ""}</p>
+    ${subHeading ? `<p class="offer-sub">${subHeading}</p>` : ""}
+    ${content.description ? `<p>${content.description}</p>` : ""}
     <ul class="offer-benefits">${benefits}</ul>
-    <p class="offer-price"><strong>${price.total_amount_formatted}</strong> <span class="muted">${content.price_unit || ""}</span></p>
+    ${planPicker}
+    <p class="offer-price"><strong>${price.total_amount_formatted}</strong> <span class="muted">${titleOf(p)}${state.qty > 1 ? ` · for ${state.qty} items` : ""}</span></p>
     <div class="offer-actions">
       <button type="button" id="acceptBtn" class="buy-now-btn ${state.protection === "accepted" ? "selected" : ""}">${content.positive_cta || "Add protection"}</button>
       <button type="button" id="declineBtn" class="btn-secondary ${state.protection === "declined" ? "selected" : ""}">${content.negative_cta || "No thanks"}</button>
@@ -105,6 +121,7 @@ function renderOffer() {
     <p class="muted small">${content.credibility_message || ""} ${pds}</p>
     <p class="muted small">${content.disclaimer || ""}</p>`;
 
+  el.querySelectorAll('input[name="plan"]').forEach((r) => r.addEventListener("change", (e) => { state.planIndex = parseInt(e.target.value, 10); render(); }));
   $("acceptBtn").addEventListener("click", () => { state.protection = "accepted"; render(); });
   $("declineBtn").addEventListener("click", () => { state.protection = "declined"; render(); });
 }
@@ -121,12 +138,12 @@ function render() {
   let totalText = money(itemTotal, "USD");
 
   if (state.offer && state.protection === "accepted") {
-    const p = state.offer.products[0];
-    const unit = p.details.finance.price.total_amount;
+    const p = state.offer.products[state.planIndex] || state.offer.products[0];
     const offerCurrency = state.offer.currency || "USD";
-    // Assumption 3 (see the assumptions slide): per-unit premium × quantity, one policy per unit.
-    const protectionTotal = unit * state.qty;
-    rows.push({ item: p.name || "Protection Plan", meta: "Premium · XCover", qty: state.qty, unit: money(unit, offerCurrency), total: money(protectionTotal, offerCurrency), premium: true });
+    // Live finding (A3 settled): total_amount is XCover's rated total for the quantity requested — one plan covering N items.
+    const protectionTotal = p.details.finance.price.total_amount;
+    const title = ((state.offer.content && state.offer.content.products) || []).find((c) => c.id === p.id)?.title || p.name || "Protection Plan";
+    rows.push({ item: title, meta: `Premium · XCover · covers ${state.qty} item${state.qty > 1 ? "s" : ""}`, qty: state.qty, unit: money(protectionTotal / state.qty, offerCurrency), total: money(protectionTotal, offerCurrency), premium: true });
     totalText = offerCurrency === "USD"
       ? money(itemTotal + protectionTotal, "USD")
       // Assumption 5: two currencies means two settlements; don't invent an FX rate to add them.
@@ -206,7 +223,7 @@ async function pay() {
     $("payMsg").textContent = "Payment received. Confirming your protection plan…";
     const res = await fetch(`/api/orders/${state.transactionId}/confirm`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offer_id: state.offer.id, quote_ids: [state.offer.products[0].id], policyholder: ph }),
+      body: JSON.stringify({ offer_id: state.offer.id, quote_ids: [(state.offer.products[state.planIndex] || state.offer.products[0]).id], policyholder: ph }),
     });
     const r = await res.json();
     if (r.envelope) logCall("confirm offer", r.envelope);

@@ -1,42 +1,42 @@
 {
-  "_fixture": "LIVE CAPTURE from XCover staging, 2026-09-15: POST /xcover/partners/E3CCM/offers/ with no schema field (partner default = cse-interview-retail), one RC-LT-549 laptop, US/USD. Used verbatim in XCOVER_MODE=fixture so the demo shape matches production exactly.",
-  "id": "dcb25217-41b1-441e-9bb4-74b64f4a30f6",
-  "session_id": "334bd22b-c664-4157-89c8-f30b4a5d6479",
+  "_fixture": "LIVE CAPTURE from XCover staging, 2026-09-16 (partner E3CCM, schema default cse-interview-retail): POST /offers/ for one RC-LT-549 laptop, USD. Used verbatim in XCOVER_MODE=fixture; ids are re-minted and request values echoed per call by lib/xcover-client.js adaptFixture(). Prices are staging test rates (randomised per call; not Cover Genius pricing). security_token values scrubbed.",
+  "id": "570743ba-4c72-4890-bfa5-b4085572aad4",
+  "session_id": "8e32777d-30a7-4d19-ba5a-ad9833bae341",
   "offer_config_id": "aeef88f5-c254-4397-b1e2-734aa29b8afc",
   "offer_schema": "cse-interview-retail",
   "currency": "USD",
   "products": [
     {
-      "id": "6a2e86d8-a8fc-41df-9d75-1e9e3c9b5d8a",
+      "id": "f77e1e25-d7d9-4a49-a9a0-71b2bf957d48",
       "product_config_id": "66d52e7c-67c2-43a3-a4a3-ffc8789ac959",
       "name": "cse-interview-product-2y",
       "type": null,
       "schema_url": null,
       "details": {
         "policy_version_id": "ca17d11d-4954-4466-a2af-9a038b088caa",
-        "start_date": "2026-09-15T12:00:00+00:00",
+        "start_date": "2026-09-16T19:54:19.835000+00:00",
         "end_date": null,
         "finance": {
           "price": {
-            "total_amount": 257.58,
-            "total_amount_without_tax": 250.08,
+            "total_amount": 197.6,
+            "total_amount_without_tax": 191.85,
             "total_amount_min": null,
             "total_amount_max": null,
-            "total_amount_formatted": "US$257.58",
-            "total_amount_without_tax_formatted": "US$250.08",
+            "total_amount_formatted": "US$197.60",
+            "total_amount_without_tax_formatted": "US$191.85",
             "total_amount_min_formatted": null,
             "total_amount_max_formatted": null
           },
           "tax": {
-            "total_amount": 7.5,
+            "total_amount": 5.75,
             "breakdown": [
               {
-                "tax_amount": 7.5,
+                "tax_amount": 5.75,
                 "tax_code": "Tax & Surcharge (label)",
-                "tax_amount_formatted": "US$7.50"
+                "tax_amount_formatted": "US$5.75"
               }
             ],
-            "total_amount_formatted": "US$7.50"
+            "total_amount_formatted": "US$5.75"
           },
           "surcharge": {
             "total_amount": null,
@@ -47,7 +47,7 @@
             "total_amount_formatted": null
           }
         },
-        "pds_url": "https://xcover-staging.com/en/pds/dcb25217-41b1-441e-9bb4-74b64f4a30f6?policy_type=product_insurance_offer_engine_v1",
+        "pds_url": "https://xcover-staging.com/en/pds/570743ba-4c72-4890-bfa5-b4085572aad4?policy_type=product_insurance_offer_engine_v1",
         "files": [],
         "extra_fields": {},
         "experiment": {},
@@ -55,36 +55,36 @@
       }
     },
     {
-      "id": "52be8434-19d5-4e5c-8bfc-1914cabb07e8",
+      "id": "2ea1d7de-9e3e-43d8-b913-b33521fe38ec",
       "product_config_id": "ae8803f9-99c1-4f66-8b2f-ad1d72e476df",
       "name": "cse-interview-product-3y",
       "type": null,
       "schema_url": null,
       "details": {
         "policy_version_id": "ca17d11d-4954-4466-a2af-9a038b088caa",
-        "start_date": "2026-09-15T12:00:00+00:00",
+        "start_date": "2026-09-16T19:54:19.835000+00:00",
         "end_date": null,
         "finance": {
           "price": {
-            "total_amount": 173.59,
-            "total_amount_without_tax": 168.54,
+            "total_amount": 218.95,
+            "total_amount_without_tax": 212.58,
             "total_amount_min": null,
             "total_amount_max": null,
-            "total_amount_formatted": "US$173.59",
-            "total_amount_without_tax_formatted": "US$168.54",
+            "total_amount_formatted": "US$218.95",
+            "total_amount_without_tax_formatted": "US$212.58",
             "total_amount_min_formatted": null,
             "total_amount_max_formatted": null
           },
           "tax": {
-            "total_amount": 5.05,
+            "total_amount": 6.37,
             "breakdown": [
               {
-                "tax_amount": 5.05,
+                "tax_amount": 6.37,
                 "tax_code": "Tax & Surcharge (label)",
-                "tax_amount_formatted": "US$5.05"
+                "tax_amount_formatted": "US$6.37"
               }
             ],
-            "total_amount_formatted": "US$5.05"
+            "total_amount_formatted": "US$6.37"
           },
           "surcharge": {
             "total_amount": null,
@@ -95,7 +95,7 @@
             "total_amount_formatted": null
           }
         },
-        "pds_url": "https://xcover-staging.com/en/pds/dcb25217-41b1-441e-9bb4-74b64f4a30f6?policy_type=product_insurance_offer_engine_v1",
+        "pds_url": "https://xcover-staging.com/en/pds/570743ba-4c72-4890-bfa5-b4085572aad4?policy_type=product_insurance_offer_engine_v1",
         "files": [],
         "extra_fields": {},
         "experiment": {},
@@ -126,7 +126,7 @@
     "negative_cta_warning": "Are you sure you want to risk it",
     "products": [
       {
-        "id": "6a2e86d8-a8fc-41df-9d75-1e9e3c9b5d8a",
+        "id": "f77e1e25-d7d9-4a49-a9a0-71b2bf957d48",
         "product_config_id": "66d52e7c-67c2-43a3-a4a3-ffc8789ac959",
         "slug": "cse-interview-product-2-year",
         "locale": "en",
@@ -141,7 +141,7 @@
         "credibility_badge": ""
       },
       {
-        "id": "52be8434-19d5-4e5c-8bfc-1914cabb07e8",
+        "id": "2ea1d7de-9e3e-43d8-b913-b33521fe38ec",
         "product_config_id": "ae8803f9-99c1-4f66-8b2f-ad1d72e476df",
         "slug": "cse-interview-product-3-year",
         "locale": "en",

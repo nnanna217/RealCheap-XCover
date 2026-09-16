@@ -1,0 +1,9 @@
+{
+  "_fixture": "LIVE CAPTURE from XCover staging, 2026-09-16 (partner E3CCM, schema default cse-interview-retail): cancel re-sent on a cancelled booking → 422 'Status change not allowed for QuotePackage in status CANCELLED' (treat as already done). Used verbatim in XCOVER_MODE=fixture; ids are re-minted and request values echoed per call by lib/xcover-client.js adaptFixture(). Prices are staging test rates (randomised per call; not Cover Genius pricing). security_token values scrubbed.",
+  "_status": 422,
+  "type": "validation_error",
+  "message": "An API error occurred.",
+  "errors": [
+    "Status change not allowed for QuotePackage in status CANCELLED"
+  ]
+}

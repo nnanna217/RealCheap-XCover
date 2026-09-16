@@ -586,3 +586,31 @@ And one that was neither: **T6**, the silent failed confirm — written on purpo
 **Ten documented as next steps** in README → "Red team", ordered: persistent ledger as a real unique index (also closes the concurrent-confirm race the Map can't), scheduled retry of pending confirms, cancel-timeout → treat "already cancelled" as success, auth on OMS/order endpoints, content-aware webhook dedup (no event id in the payload — ask CG), reconciliation job, products[] choice (A9), live captures replacing fixtures, regional price lists, small validations.
 
 **Manual:** my request — asked for a red-team pass and a README synthesis before submitting, so the panel reads the weaknesses from me rather than finding them.
+
+## T12 — 2026-09-16 — Live API through the VPN
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| got the VPN from Cover Genius, confirmed reachability manually, ran a first live test in a separate session, brought the findings here for consolidation | corrections to that session's claims, the full live write path (confirm / replay / new key / opt-out / cancel / repeat cancel), fixtures replaced with scrubbed captures, code corrected to the real shapes, plan picker |
+
+**Asked:** see `PROMPTS.md` T12.
+
+**Corrections to the other session's account.** (1) Its DNS problem did not reproduce here — the host resolves and connects by name through the VPN; no pinning is needed, but verify with the VPN *off* before Thursday. (2) "That changes P4" — it settles A9, planned as next step #7; built now. (3) It saved only the USD offer; the write path had never been exercised live. (4) Its branch note: the repo is on `master`, and its capture commit was never pushed.
+
+**Live findings that changed the code:**
+- **Quantity (A3 settled):** `total_amount` is the rated total for `product.quantity`, not a unit price (qty 1 → $164.51, qty 2 → $485.03, qty 3 → $624.12). Every unit×qty calculation removed; `premium_total` is stored, unit is total÷qty for display.
+- **Two plans per offer (A9 settled):** titles in `content.products[]` by id, benefits in `content.extras`; plan picker built; confirm sends the chosen quote id; ledger records `plan_title` and `confirmed_quote_ids`.
+- **Eligibility (A1 amended):** staging's `E3CCM` quotes a $4 sleeve (US$1.34) — no eligibility rule is configured on the partner. Optional `RC_ELIGIBLE_CATEGORIES` guard added, off by default, recorded as a *local* decision with no XCover envelope.
+- **`payment_details.provider` must be a real PSP** — a made-up one is rejected (422 `offer_validation_request_invalid`). Now omitted unless `XCOVER_PAYMENT_PROVIDER` is set (A11). **T6's fix proved itself here:** the first live confirm failed and the order was left paid + `confirm_error`, not silently "confirmed".
+- **Price validation compared the wrong pair:** booking `total_premium` is ex-tax; `total_price` is inc-tax and equals the quote's `total_amount`. Fixed; and it must compare against the *chosen* plan, not `products[0]` (a second false mismatch, caught on the GBP pass).
+- **Cancel body:** the guide's `reason_for_cancellation` is rejected as "Unexpected field"; the body is `{preview, quotes}`. Refund comes back as top-level `refund_amount` and per-quote `refund_value`, with `adjustment_fee` and `policy_coolingoff_date`. A repeat cancel returns 422 "Status change not allowed … CANCELLED" — now treated as already done (red-team next step #3, closed).
+- **`security_token` rides inside COI / FNOL / payout URLs** — scrubbed inside strings now, not just as a key.
+- **Real response shapes are supersets of both specs**: confirm returns a 20-field policyholder, `account_url`, `sign_up_url`, `cancel_link`, `fast_quote_id`; offers return `session_id` and `content.products[]`. Sub-heading is `"N/A"` on staging (hidden); `policy_end_date` is null (shown as "not set by staging").
+
+**The three-layer finding for the room — observed, not theorised:** same key → **409 with the cached booking**; **new key on the same offer → 422 "Booking already exists"** (XCover refuses a second policy on an offer regardless of key); the remaining duplicate path is *re-quote → new offer → confirm again*, which only the ledger guards.
+
+**Fixtures:** every file is now a scrubbed live capture except the ineligible 422 (staging never produces one) and the 423, both labelled. `adaptFixture` keeps `content.products[].id` in step when re-minting product ids (bug found while verifying).
+
+**Verified:** fixture mode end to end with the captures (plan picker, extras as benefits, no "N/A", chosen 3-year plan confirmed, token scrubbed in COI URL, refund `$1,098.00 + €234.06`, guard on/off); live GBP pass through the app (quote → confirm 3Y → repeat from ledger → cancel → repeat from ledger). Three test bookings created on staging and all cancelled.
+
+**Demo hazards (from the live data, say them first):** prices change every call and the 3-year can be cheaper than the 2-year; a plan can be ~50% of the laptop price; the staging partner quotes accessories. **Operational risk:** staging needed the VPN from this network — confirm it resolves with the VPN off, and if not, set DNS to 1.1.1.1 while connected before Thursday.

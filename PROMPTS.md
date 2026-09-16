@@ -143,3 +143,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T11 — 2026-09-14 — Red team
 
 > Red team the solution and highlight fixes or considerations to improve further. Synthesize this to next steps or future improvements in the README.
+
+## T12 — 2026-09-16 — Live API (VPN)
+
+> Staging is reachable with the VPN on. Consolidate the other chat's findings here, make any corrections, and test the live credentials. *(Other session's findings pasted: auth works; schema default `cse-interview-retail`; two plans; superset response; real copy; 3-year cheaper than 2-year; ~47% premium; VPN resolver broken; `products[0]` only; sub-heading "N/A".)*

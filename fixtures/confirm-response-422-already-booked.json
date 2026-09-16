@@ -1,0 +1,19 @@
+{
+  "_fixture": "LIVE CAPTURE from XCover staging, 2026-09-16 (partner E3CCM, schema default cse-interview-retail): a NEW idempotency key on an already-confirmed offer → 422 'Booking already exists for fast_quote_id' — XCover refuses a second policy on the same offer regardless of key. Used verbatim in XCOVER_MODE=fixture; ids are re-minted and request values echoed per call by lib/xcover-client.js adaptFixture(). Prices are staging test rates (randomised per call; not Cover Genius pricing). security_token values scrubbed.",
+  "_status": 422,
+  "type": "validation_error",
+  "message": "An API error occurred.",
+  "errors": [
+    {
+      "product_config_id": null,
+      "quote_id": null,
+      "code": "offer_validation_request_invalid",
+      "details": [
+        "Booking already exists for fast_quote_id b6c81cd7-7b97-4fd8-9596-4e4861fc0d6c. INS number: T7BCR-2C3QU-INS"
+      ]
+    }
+  ],
+  "code": "offer_validation_request_invalid",
+  "error_id": "b6c81cd7-7b97-4fd8-9596-4e4861fc0d6c",
+  "metadata": {}
+}

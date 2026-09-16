@@ -27,6 +27,8 @@ function scrubSecrets(v) {
     for (const [k, val] of Object.entries(v)) out[k] = k === "security_token" ? "***" : scrubSecrets(val);
     return out;
   }
+  // Live finding: COI / FNOL / payout links carry the token as a query parameter.
+  if (typeof v === "string") return v.replace(/([?&]security_token=)[^&#\s"]+/gi, "$1***");
   return v;
 }
 app.use(express.urlencoded({ extended: true }));
@@ -100,6 +102,16 @@ app.post("/api/offers", async (req, res) => {
     },
   };
 
+  // Optional partner-side guard (RC_ELIGIBLE_CATEGORIES, comma-separated prefixes). OFF by default. Live finding:
+  // E3CCM on staging quotes any SKU — a $4 sleeve gets a plan — because no eligibility rule is configured on the
+  // partner; in production that rule lives in the offer schema / catalog classification. This guard is RealCheap
+  // choosing not to ask, recorded as a LOCAL decision (no XCover call), never dressed up as an XCover answer.
+  const allow = (process.env.RC_ELIGIBLE_CATEGORIES || "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (allow.length && !allow.some((pre) => product.category.startsWith(pre))) {
+    orders.upsert(txn, { sku: product.sku, product_name: product.name, unit_price: product.price, quantity, country, currency, offer_id: null, quote_ids: [], status: "no_offer", local_rule: `category ${product.category} not in RC_ELIGIBLE_CATEGORIES` },
+      { event: "eligibility (RealCheap rule, no XCover call)", status: 0, outcome: "not_offered" });
+    return res.json({ mode: xcover.MODE, ok: false, status: 0, local_rule: true, elapsed_ms: 0, request: null, response: { code: "realcheap_category_not_eligible", message: `RealCheap does not offer protection on ${product.category}` }, transaction_id: txn });
+  }
   // Eligibility is XCover's decision (their catalog classification), never this server's. In live mode the
   // request goes up regardless of category and XCover answers. In fixture mode the only thing we choose is
   // WHICH recorded answer stands in: an offer for electronics, the documented 422 for anything else.
@@ -117,7 +129,10 @@ app.post("/api/offers", async (req, res) => {
     quote_count: ((orders.get(txn) || {}).quote_count || 0) + 1,
     superseded_offer_ids: (() => { const prev = orders.get(txn); return prev && prev.offer_id && offer && prev.offer_id !== offer.id ? [...(prev.superseded_offer_ids || []), prev.offer_id] : (prev && prev.superseded_offer_ids) || []; })(),
     offer_currency: offer ? offer.currency : null,
-    premium_unit: offer ? offer.products[0].details.finance.price.total_amount : null,
+    // Live finding: total_amount is the rated TOTAL for context.product.quantity, not a unit price (A3 settled).
+    premium_total: offer ? offer.products[0].details.finance.price.total_amount : null,
+    premium_unit: offer ? Number((offer.products[0].details.finance.price.total_amount / quantity).toFixed(2)) : null,
+    plans: offer ? offer.products.map((p) => ({ quote_id: p.id, title: ((offer.content && offer.content.products) || []).find((c) => c.id === p.id)?.title || p.name, total: p.details.finance.price.total_amount, total_formatted: p.details.finance.price.total_amount_formatted })) : [],
     status: offer ? "quoted" : "no_offer",
   }, { event: "create offer", status: envelope.status, mode: envelope.mode, envelope });
 
@@ -178,7 +193,9 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
     quotes: quote_ids.map((id) => ({ id })),
     policyholder,
     partner_transaction_id: txn,
-    payment_details: { provider: order.payment.provider, transaction_id: order.payment.id },
+    // payment_details is optional and XCover validates `provider` against real PSP names (staging rejected a
+    // made-up one with offer_validation_request_invalid). Sent only when a real provider is configured.
+    ...(process.env.XCOVER_PAYMENT_PROVIDER ? { payment_details: { provider: process.env.XCOVER_PAYMENT_PROVIDER, transaction_id: order.payment.id } } : {}),
   };
   const sim = bypass ? "409" : simulate;
   let fixture = sim === "409" ? "confirm-response-409.json" : sim === "423" ? "confirm-response-423.json" : "confirm-response.json";
@@ -189,7 +206,7 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   let envelope;
   for (let attempt = 1; attempt <= 3; attempt++) {
     envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key },
-      { echoQuoteIds: true, echoTxn: txn, echoPolicyholder: true, echoPrice: { currency: order.offer_currency || "USD", unit: order.premium_unit || 0, quantity: order.quantity || 1 } });
+      { echoQuoteIds: true, echoTxn: txn, echoPolicyholder: true, echoPrice: { currency: order.offer_currency || "USD", total: order.premium_total || 0 } });
     attempts.push({ attempt, status: envelope.status, elapsed_ms: envelope.elapsed_ms });
     if (envelope.status !== 423) break;
     await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
@@ -202,12 +219,19 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   //  - the confirmed price must match the price quoted at Create Offer.
   const review = [];
   if (booking && booking.errors && Object.keys(booking.errors).length) review.push({ code: "booking_errors_present", detail: booking.errors });
-  const quotedTotal = Number(((order.premium_unit || 0) * (order.quantity || 1)).toFixed(2));
-  if (booking && typeof booking.total_premium === "number" && Math.abs(booking.total_premium - quotedTotal) > 0.005)
-    review.push({ code: "price_mismatch", detail: `quoted ${order.offer_currency} ${quotedTotal}, confirmed ${booking.currency} ${booking.total_premium}` });
+  // Live finding: booking.total_price is the inc-tax total and equals the quote's total_amount; total_premium is EX-tax.
+  const chosenPlan = (order.plans || []).find((p) => quote_ids.includes(p.quote_id));
+  const quotedTotal = Number(((chosenPlan ? chosenPlan.total : order.premium_total) || 0).toFixed(2));
+  const confirmedTotal = typeof booking?.total_price === "number" ? booking.total_price : (booking?.quotes || []).reduce((s, q) => s + Number(q.price || 0), 0);
+  if (booking && confirmedTotal && Math.abs(confirmedTotal - quotedTotal) > 0.005)
+    review.push({ code: "price_mismatch", detail: `quoted ${order.offer_currency} ${quotedTotal}, confirmed ${booking.currency} ${confirmedTotal}` });
+  const chosen = (order.plans || []).find((p) => quote_ids.includes(p.quote_id));
   const updated = orders.upsert(txn, {
     idempotency_key: key,
     policyholder,
+    confirmed_quote_ids: booking ? quote_ids : order.confirmed_quote_ids || null,
+    plan_title: chosen ? chosen.title : order.plan_title || null,
+    ...(chosen && booking ? { premium_total: chosen.total } : {}),
     booking_id: booking ? booking.id : order.booking_id || null,
     booking: booking || order.booking || null,
     status: booking ? "confirmed" : order.status,
@@ -270,15 +294,21 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
   let premiumRefund = 0, cancelBody = null;
 
   if (order.booking_id && order.status === "confirmed") {
-    const body = { reason_for_cancellation: reason, quotes: order.quote_ids.map((id) => ({ id })) };
+    // Live finding: the API rejects `reason_for_cancellation` ("Unexpected field") despite the guide; body is preview + quotes.
+    const body = { quotes: (order.confirmed_quote_ids || order.quote_ids).map((id) => ({ id })) };
     // Guide: "always preview the cancellation to show the customer the refund amount before processing".
-    const echo = { echoQuoteIds: true, echoPrice: { currency: order.offer_currency || "USD", unit: order.premium_unit || 0, quantity: order.quantity || 1 } };
+    const echo = { echoQuoteIds: true, echoPrice: { currency: order.offer_currency || "USD", total: order.premium_total || 0 } };
+    const alreadyCancelled = (e) => e.status === 422 && JSON.stringify(e.response || "").includes("in status CANCELLED");
     const preview = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: true }, "cancel-preview.json", {}, echo);
     envelopes.push({ event: "cancel booking (preview)", envelope: preview });
     if (preview.ok) {
       const cancel = await xcover.call("POST", `bookings/${order.booking_id}/cancel`, { ...body, preview: false }, "cancel-response.json", {}, echo);
       envelopes.push({ event: "cancel booking", envelope: cancel });
-      if (cancel.ok) { cancelBody = cancel.response; premiumRefund = Number((cancelBody.refund && cancelBody.refund.amount) || 0); }
+      if (cancel.ok || alreadyCancelled(cancel)) {
+        // Refund per the live shape: top-level refund_amount when present, else the sum of quotes[].refund_value.
+        cancelBody = cancel.ok ? cancel.response : { ...preview.response, status: "CANCELLED", _note: "already cancelled on a previous attempt; refund figures from the preview" };
+        premiumRefund = typeof cancelBody.refund_amount === "number" ? cancelBody.refund_amount : (cancelBody.quotes || []).reduce((s, q) => s + Number(q.refund_value || 0), 0);
+      }
       else return res.status(cancel.status === 0 ? 502 : 200).json({ served_from: "xcover", cancelled: false, order, envelopes, error: "XCover did not cancel the booking; no refund issued — retry later" });
     } else {
       return res.status(preview.status === 0 ? 502 : 200).json({ served_from: "xcover", cancelled: false, order, envelopes, error: "cancellation preview failed; no refund issued — retry later" });
@@ -296,7 +326,7 @@ app.post("/api/orders/:txn/refund", async (req, res) => {
     total: sameCurrency ? Number((productRefund + premiumRefund).toFixed(2)) : null,
     total_formatted: sameCurrency ? fmt(productRefund + premiumRefund, "USD") : `${fmt(productRefund, "USD")} + ${fmt(premiumRefund, premiumCurrency)}`,
     reason, at: new Date().toISOString(),
-    xcover_cancellation: cancelBody ? { booking_id: cancelBody.id, status: cancelBody.status, cancelled_at: cancelBody.cancelled_at, refund: cancelBody.refund } : null,
+    xcover_cancellation: cancelBody ? { booking_id: cancelBody.id, status: cancelBody.status, cancellation_id: cancelBody.cancellation_id || null, cancelled_at: (cancelBody.quotes || [])[0]?.policy_cancellation_date || null, cooling_off_until: (cancelBody.quotes || [])[0]?.policy_coolingoff_date || null, adjustment_fee: (cancelBody.quotes || [])[0]?.adjustment_fee ?? null, refund_amount: premiumRefund } : null,
   };
   let updated = order;
   for (const e of envelopes) updated = orders.upsert(txn, {}, { event: e.event, status: e.envelope.status, mode: e.envelope.mode, envelope: e.envelope });
@@ -356,7 +386,7 @@ app.post("/api/orders/:txn/pay", async (req, res) => {
   if (!order) return res.status(404).json({ error: "unknown order" });
   const { protection } = req.body || {};
   await new Promise((r) => setTimeout(r, 600));
-  const premium = protection === "accepted" && order.premium_unit ? order.premium_unit * order.quantity : 0;
+  const premium = protection === "accepted" && order.premium_total ? order.premium_total : 0;
   const updated = orders.upsert(order.transaction_id, {
     protection: protection || "undecided",
     payment: { id: `PAY-${Date.now().toString(36).toUpperCase()}`, provider: "realcheap-psp (simulated)", status: "simulated_success", amount: order.unit_price * order.quantity + premium, at: new Date().toISOString() },

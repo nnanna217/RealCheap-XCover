@@ -1,102 +1,161 @@
 {
-  "_fixture": "EUR variant of offer-response.json — same structure, placeholder amounts in EUR so the country selector visibly changes the premium currency in fixture mode. Not Cover Genius pricing.",
-  "id": "0f6c1e2a-7b3d-4c8e-9a1f-2d5e6b7c8d90",
-  "offer_config_id": "6d7e8f90-1a2b-4c3d-8e4f-5a6b7c8d9e0f",
-  "offer_schema": "product_retail",
+  "_fixture": "LIVE CAPTURE from XCover staging, 2026-09-16 (partner E3CCM, schema default cse-interview-retail): POST /offers/ for one RC-LT-549 laptop, EUR. Used verbatim in XCOVER_MODE=fixture; ids are re-minted and request values echoed per call by lib/xcover-client.js adaptFixture(). Prices are staging test rates (randomised per call; not Cover Genius pricing). security_token values scrubbed.",
+  "id": "23fbb496-24a7-4f2a-8bf5-4704141682c8",
+  "session_id": "07bca552-218b-4c7d-ae70-f4f39c13a760",
+  "offer_config_id": "aeef88f5-c254-4397-b1e2-734aa29b8afc",
+  "offer_schema": "cse-interview-retail",
   "currency": "EUR",
   "products": [
     {
-      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
-      "product_config_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-      "name": "Protection Plan — 2 years accidental damage & extended warranty",
-      "type": "xcover-product",
-      "schema_url": "https://api.xcover-staging.com/xcover/partners/E3CCM/schemas/product_retail/",
+      "id": "ce0b0785-b2af-4582-803e-134d8b5a7f45",
+      "product_config_id": "66d52e7c-67c2-43a3-a4a3-ffc8789ac959",
+      "name": "cse-interview-product-2y",
+      "type": null,
+      "schema_url": null,
       "details": {
-        "policy_version_id": "pv-retail-protection-2026-01",
-        "start_date": "2026-09-13T00:00:00Z",
-        "end_date": "2028-09-13T00:00:00Z",
+        "policy_version_id": "ca17d11d-4954-4466-a2af-9a038b088caa",
+        "start_date": "2026-09-16T19:54:21.345000+00:00",
+        "end_date": null,
         "finance": {
           "price": {
-            "total_amount": 45.99,
-            "total_amount_without_tax": 37.7,
-            "total_amount_min": 45.99,
-            "total_amount_max": 45.99,
-            "total_amount_formatted": "€45.99",
-            "total_amount_without_tax_formatted": "€37.70",
-            "total_amount_min_formatted": "€45.99",
-            "total_amount_max_formatted": "€45.99"
+            "total_amount": 271.04,
+            "total_amount_without_tax": 263.15,
+            "total_amount_min": null,
+            "total_amount_max": null,
+            "total_amount_formatted": "€271.04",
+            "total_amount_without_tax_formatted": "€263.15",
+            "total_amount_min_formatted": null,
+            "total_amount_max_formatted": null
           },
           "tax": {
-            "total_amount": 8.29,
-            "total_amount_formatted": "€8.29"
+            "total_amount": 7.89,
+            "breakdown": [
+              {
+                "tax_amount": 7.89,
+                "tax_code": "Tax & Surcharge (label)",
+                "tax_amount_formatted": "€7.89"
+              }
+            ],
+            "total_amount_formatted": "€7.89"
           },
           "surcharge": {
-            "total_amount": 0,
-            "total_amount_formatted": "€0.00"
+            "total_amount": null,
+            "total_amount_formatted": null
           },
           "commission": {
-            "total_amount": 11.5,
-            "total_amount_formatted": "€11.50"
+            "total_amount": null,
+            "total_amount_formatted": null
           }
         },
-        "pds_url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
-        "files": [
-          {
-            "name": "Policy Disclosure Statement",
-            "url": "https://www.xcover.com/en/pds/placeholder-retail-protection",
-            "type": "pds"
-          }
-        ],
-        "extra_fields": {
-          "pricing_matrix": [],
-          "appliance": "laptop",
-          "retail_ex_tax": 37.7,
-          "retail_inc_tax": 45.99,
-          "retail_ex_tax_rounded": 37.7,
-          "retail_inc_tax_rounded": 45.99,
-          "taxes": {
-            "EU_IPT": 8.29
-          },
-          "tax_rate": 0.22,
-          "benefit_type": "accidental damage and extended warranty",
-          "partner_commission": 11.5,
-          "variant": "2y"
-        },
+        "pds_url": "https://xcover-staging.com/de/pds/23fbb496-24a7-4f2a-8bf5-4704141682c8?policy_type=product_insurance_offer_engine_v1",
+        "files": [],
+        "extra_fields": {},
         "experiment": {},
-        "benefits": [
-          {
-            "title": "Accidental damage",
-            "description": "Drops, spills and cracked screens"
+        "benefits": []
+      }
+    },
+    {
+      "id": "9afb5f61-8b20-4247-b33e-180d566769f1",
+      "product_config_id": "ae8803f9-99c1-4f66-8b2f-ad1d72e476df",
+      "name": "cse-interview-product-3y",
+      "type": null,
+      "schema_url": null,
+      "details": {
+        "policy_version_id": "ca17d11d-4954-4466-a2af-9a038b088caa",
+        "start_date": "2026-09-16T19:54:21.345000+00:00",
+        "end_date": null,
+        "finance": {
+          "price": {
+            "total_amount": 234.06,
+            "total_amount_without_tax": 227.25,
+            "total_amount_min": null,
+            "total_amount_max": null,
+            "total_amount_formatted": "€234.06",
+            "total_amount_without_tax_formatted": "€227.25",
+            "total_amount_min_formatted": null,
+            "total_amount_max_formatted": null
           },
-          {
-            "title": "Extended warranty",
-            "description": "Mechanical and electrical failure after the manufacturer warranty ends"
+          "tax": {
+            "total_amount": 6.81,
+            "breakdown": [
+              {
+                "tax_amount": 6.81,
+                "tax_code": "Tax & Surcharge (label)",
+                "tax_amount_formatted": "€6.81"
+              }
+            ],
+            "total_amount_formatted": "€6.81"
           },
-          {
-            "title": "Repair or replace",
-            "description": "Repaired or replaced at no extra cost; claims paid via XClaim"
+          "surcharge": {
+            "total_amount": null,
+            "total_amount_formatted": null
+          },
+          "commission": {
+            "total_amount": null,
+            "total_amount_formatted": null
           }
-        ]
+        },
+        "pds_url": "https://xcover-staging.com/de/pds/23fbb496-24a7-4f2a-8bf5-4704141682c8?policy_type=product_insurance_offer_engine_v1",
+        "files": [],
+        "extra_fields": {},
+        "experiment": {},
+        "benefits": []
       }
     }
   ],
   "content": {
-    "schema_version": "1",
-    "locale": "en-DE",
-    "slug": "retail-protection-offer",
-    "title": "Protect your purchase",
-    "extras": {},
-    "heading": "Protection Plan",
-    "sub_heading": "2 years of accidental damage and extended warranty cover",
-    "disclaimer": "Cover is provided by XCover and subject to the Policy Disclosure Statement.",
-    "disclaimer_html": "<p>Cover is provided by XCover and subject to the <a href=\"#\">Policy Disclosure Statement</a>.</p>",
-    "price_unit": "per item",
-    "description": "Repairs or replacement if your laptop is accidentally damaged or stops working after the manufacturer warranty ends.",
-    "positive_cta": "Yes, protect my laptop",
-    "negative_cta": "No thanks, I'll take the risk",
-    "negative_cta_warning": "Without protection, repair costs after the manufacturer warranty are yours.",
-    "required_message": "",
-    "credibility_message": "Trusted by 1,000+ shoppers this month"
+    "schema_version": "content:1.0",
+    "locale": "en",
+    "slug": "cse-interview-retail-offer",
+    "title": "CSE Interview Retail Offer",
+    "extras": {
+      "Breakdowns": "Protects your new purchase against breakdowns and faults once the manufacturer’s warranty period is over.",
+      "Accidental Damage": "Covers issues not included in your manufacturer’s warranty, such as accidental damage or theft.",
+      "Cash Refund": "Get a replacement or a cash refund up to the full amount you originally paid for it."
+    },
+    "heading": "Back your buy with XCover protection",
+    "disclaimer": "By adding protection, I confirm that I have read the terms and conditions",
+    "price_unit": "",
+    "description": "",
+    "sub_heading": "N/A",
+    "negative_cta": "No thanks, I'll risk it",
+    "positive_cta": "Add protection",
+    "disclaimer_html": "<p data-block-key=\"aaqg8\">By adding protection, I confirm that I have read the terms and conditions</p>",
+    "required_message": "Please make a selection",
+    "credibility_message": "10,777 people protect their purchase each week",
+    "negative_cta_warning": "Are you sure you want to risk it",
+    "products": [
+      {
+        "id": "ce0b0785-b2af-4582-803e-134d8b5a7f45",
+        "product_config_id": "66d52e7c-67c2-43a3-a4a3-ffc8789ac959",
+        "slug": "cse-interview-product-2-year",
+        "locale": "en",
+        "title": "2 Year Plan",
+        "benefits": {},
+        "disclaimer": "",
+        "exclusions": {},
+        "inclusions": {},
+        "description": "2 Year Plan",
+        "terms_cta_html": "",
+        "disclaimer_html": "",
+        "credibility_badge": ""
+      },
+      {
+        "id": "9afb5f61-8b20-4247-b33e-180d566769f1",
+        "product_config_id": "ae8803f9-99c1-4f66-8b2f-ad1d72e476df",
+        "slug": "cse-interview-product-3-year",
+        "locale": "en",
+        "title": "3 Year Plan",
+        "benefits": {},
+        "disclaimer": "",
+        "exclusions": {},
+        "inclusions": {},
+        "description": "3 Year Plan",
+        "terms_cta_html": "",
+        "disclaimer_html": "",
+        "credibility_badge": ""
+      }
+    ]
   },
   "errors": {}
 }

@@ -602,3 +602,10 @@ footer {
 .line-items.orders td:nth-child(1) code { font-size: 0.8rem; }
 button[disabled] { opacity: 0.45; cursor: not-allowed; }
 .policy-card.pending { background: #fff7ed; }
+
+/* Plan picker — the live API returns more than one plan per offer */
+.plan-picker { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 12px; }
+.plan-option { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #d9d9d9; border-radius: 8px; cursor: pointer; background: #fff; font-size: 0.9rem; }
+.plan-option.selected { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+.plan-option .plan-title { flex: 1; }
+.plan-option .plan-price { font-weight: bold; }
