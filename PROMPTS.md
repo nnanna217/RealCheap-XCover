@@ -159,3 +159,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T15 — 2026-09-16 — Demo controls in live mode
 
 > In live mode the "bad signature" / demo webhook buttons don't seem disabled in the front end — is that what you meant, or a mistake? And "bypass the ledger — let XCover answer" reads from the ledger in live mode; not yet retested in fixture mode.
+
+## T16 — 2026-09-16 — Sleeve confirm 422 in live mode: "Duplicated partner_transaction_id"
+
+> Testing the sleeve live: quote works, confirm returns 422 `offer_validation_request_invalid` (laptop works). What API does refund call, and why doesn't it show in the Integration log? *(then the log entry: details "Duplicated partner_transaction_id: RC-MU4JG2YZ-0D4S0R")*

@@ -53,8 +53,9 @@ function render(o) {
     <section class="policy-card pending">
       <h3>Protection plan <span class="call-status warn">PENDING CONFIRMATION</span></h3>
       <p>You paid for a protection plan but XCover has not confirmed it yet${o.confirm_error ? ` — <em>${esc(o.confirm_error.error)}</em>` : ""}. Nothing exists on XCover's side until Confirm Offer succeeds, so this is retried until it does.</p>
+      ${o.needs_reconciliation ? `<p class="offer-warning"><strong>Reconciliation needed:</strong> XCover reports a booking already exists for order reference <code>${o.transaction_id}</code>, but this OMS has no record of it (a restart empties the in-memory ledger). In production this is the nightly reconciliation job's case — look the booking up by <code>partner_transaction_id</code> and attach it. Retrying under this reference will keep failing by design: XCover allows one booking per reference, ever.</p>` : ""}
       <div class="demo-tools">
-        <button type="button" id="confirmRetryBtn" class="buy-now-btn small-btn">Retry confirm now</button>
+        <button type="button" id="confirmRetryBtn" class="buy-now-btn small-btn" ${o.needs_reconciliation ? "disabled" : ""}>Retry confirm now</button>
         <span class="small muted" id="confirmRetryMsg"></span>
       </div>
     </section>` : o.protection === "declined" ? `<p class="muted">Protection plan declined.</p>` : `<p class="muted">No protection plan on this order.</p>`}

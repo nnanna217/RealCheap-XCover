@@ -57,8 +57,12 @@ app.post("/api/offers", async (req, res) => {
   // a new one is minted only when the cart has none yet. Never regenerate on re-quote, reload or retry.
   // …and a completed order is no longer a cart: if the ref already belongs to a paid/confirmed/refunded order
   // (the shopper pressed Back after checkout), start a new order rather than mutate the finished one.
+  // …and a ref the ledger does not know is NOT reused. Live finding (T16): XCover enforces one booking per
+  // partner_transaction_id forever (even after cancellation). After a restart the ledger is empty but the browser
+  // still holds the old ref; re-registering it and confirming would collide with a booking we no longer remember.
+  // An unknown ref is either a lost cart (harmless to restart) or a lost booking (dangerous to reuse): mint fresh.
   const prior = /^RC-[A-Z0-9-]{6,}$/.test(transaction_id || "") ? orders.get(transaction_id) : null;
-  const reusable = prior ? !(prior.payment || prior.booking_id || prior.refund || prior.opt_out) : /^RC-[A-Z0-9-]{6,}$/.test(transaction_id || "");
+  const reusable = !!prior && !(prior.payment || prior.booking_id || prior.refund || prior.opt_out);
   const txn = reusable ? transaction_id : `RC-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
 
   // Request shape: partner-docs.covergenius.com/offers/vertical-examples/product-retail/create-offer
@@ -215,6 +219,9 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   }
 
   const booking = envelope.status === 200 || envelope.status === 409 ? envelope.response : null;
+  // Live finding (T16): "Duplicated partner_transaction_id" means XCover already holds a booking for this order
+  // reference and this ledger has no record of it — not a retry case, a reconciliation case.
+  const dupRef = envelope.status === 422 && JSON.stringify(envelope.response || "").includes("Duplicated partner_transaction_id");
   // Post-response validations the guide asks the partner to perform:
   //  - an `errors` object on a success "indicates an important logic error during booking that should be investigated";
   //  - the confirmed price must match the price quoted at Create Offer.
@@ -236,7 +243,8 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
     booking_id: booking ? booking.id : order.booking_id || null,
     booking: booking || order.booking || null,
     status: booking ? "confirmed" : order.status,
-    confirm_error: booking ? null : { error: envelope.error || `XCover replied HTTP ${envelope.status}${envelope.response && envelope.response.code ? " " + envelope.response.code : ""}`, at: new Date().toISOString() },
+    confirm_error: booking ? null : { error: dupRef ? "XCover already holds a booking for this order reference (Duplicated partner_transaction_id) — this ledger has no record of it. Reconcile with XCover; do not retry under this reference." : envelope.error || `XCover replied HTTP ${envelope.status}${envelope.response && envelope.response.code ? " " + envelope.response.code : ""}`, at: new Date().toISOString(), ...(dupRef ? { reconcile: true } : {}) },
+    ...(dupRef ? { needs_reconciliation: { reason: "duplicated partner_transaction_id on confirm", at: new Date().toISOString() } } : {}),
     ...(review.length ? { needs_review: review } : {}),
   }, { event: bypass ? "confirm offer (forced past ledger)" : "confirm offer", status: envelope.status, mode: envelope.mode, idempotency_key: key, attempts, envelope, ...(review.length ? { review } : {}) });
 

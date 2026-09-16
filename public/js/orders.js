@@ -16,7 +16,8 @@ function pill(o) {
   const [label, cls] = STATUS[key] || [o.status, ""];
   const wh = o.booking && o.booking.last_webhook ? `<br><span class="small muted">via webhook ${o.booking.last_webhook.event}</span>` : "";
   const due = o.refund_due ? `<br><span class="call-status fail small">refund due ${money(o.refund_due.premium, o.refund_due.currency)}</span>` : "";
-  const err = o.confirm_error && !o.booking_id ? `<br><span class="call-status fail small" title="${esc(o.confirm_error.error)}">confirm failed</span><br><span class="small muted">${esc(o.confirm_error.error)}</span>` : "";
+  const err = o.needs_reconciliation ? `<br><span class="call-status warn small">reconcile with XCover</span><br><span class="small muted">booking exists on XCover for this reference; not in this ledger</span>`
+    : o.confirm_error && !o.booking_id ? `<br><span class="call-status fail small" title="${esc(o.confirm_error.error)}">confirm failed</span><br><span class="small muted">${esc(o.confirm_error.error)}</span>` : "";
   return `<span class="call-status ${cls}">${label}</span>${wh}${due}${err}`;
 }
 
@@ -54,7 +55,7 @@ function actions(o) {
   return `<div class="actions">
     <a class="btn-secondary small-btn" href="/result.html?txn=${encodeURIComponent(o.transaction_id)}">View</a>
     ${btn("refund", o.refund ? "Refund again (demo)" : "Refund order", canRefund || !!o.refund, o.refund ? "btn-secondary" : "buy-now-btn")}
-    ${o.booking_id ? btn("confirm", "Re-send confirm (demo)", true) : o.payment && o.protection === "accepted" ? btn("confirm", "Retry confirm", true, "buy-now-btn") : ""}
+    ${o.booking_id ? btn("confirm", "Re-send confirm (demo)", true) : o.payment && o.protection === "accepted" && !o.needs_reconciliation ? btn("confirm", "Retry confirm", true, "buy-now-btn") : ""}
     <div class="small muted act-msg" id="msg-${o.transaction_id}"></div>
   </div>`;
 }

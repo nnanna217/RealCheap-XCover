@@ -658,3 +658,21 @@ And one that was neither: **T6**, the silent failed confirm — written on purpo
 **Verified:** fixture mode → checkbox and simulator present; live mode → both absent, notes shown, LIVE badge. Live test booking `ARGJG-2K626-INS` created and cancelled.
 
 **Manual:** the candidate tested the mode the demo won't use, which is how you find the gaps the demo would never show.
+
+## T16 — 2026-09-16 — "Duplicated partner_transaction_id": XCover's own natural-key guard
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| tested the sleeve live, got a 422 on confirm, dug the `details` line out of the Integration log | reproduced (sleeve confirms fine on a fresh ref), probed exactly when XCover treats a reference as duplicated, fixed the two consequences |
+
+**Asked:** see `PROMPTS.md` T16.
+
+**Not the sleeve.** A fresh sleeve order confirms live (booking `A4WNH-ARTV9-INS`, cancelled after). The 422's `details` said `Duplicated partner_transaction_id` — the order reference had already produced a booking before a server restart; the in-memory ledger forgot it, the browser's `sessionStorage` didn't, the re-quote re-registered the ref as new, and XCover was the one that remembered.
+
+**Probed, live, with throwaway refs:** (1) failed confirm then retry under the same ref → **200** — a failure does not burn the reference, so the retry path is safe; (2) successful booking, then a new offer confirmed under the same ref → **422 Duplicated**; (3) cancel that booking, new offer, same ref → **still 422** — cancellation does not free it. **XCover enforces one booking per partner reference, for ever.** That is the natural-key uniqueness recommended on day one, and Cover Genius has it server-side: a fourth layer after the ledger, the idempotency key (409) and the offer (422 already booked).
+
+**Fixed:** (1) `/api/offers` no longer resurrects a reference the ledger doesn't know — an unknown ref (post-restart) is minted fresh; a known in-flight ref is still reused (verified both). (2) A duplicate-reference 422 on confirm sets `needs_reconciliation` with an explanation, disables Retry (it would fail by design), and the result page / OMS say "reconcile with XCover — a booking exists for this reference that this ledger cannot see". Recorded as rule 3b in `CLAUDE.md`; README next-step #1 (persistent ledger) now carries this as evidence.
+
+**Refund and the log:** refund calls `POST /bookings/{id}/cancel` twice (preview, then real) and both appear in the log — *when there is a booking*. This order had none (confirm never succeeded), so the refund was product-only and made no XCover call; nothing to log is the correct outcome.
+
+**Manual:** the candidate's dig into the `details` line turned a "sleeve bug" into the last idempotency layer — and into evidence for the persistence next-step that had been theoretical.
