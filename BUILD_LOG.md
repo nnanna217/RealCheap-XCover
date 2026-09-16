@@ -628,3 +628,17 @@ And one that was neither: **T6**, the silent failed confirm — written on purpo
 **Changed:** the decline warning now reads "…You can still change your mind. Your decline is reported to XCover (opt-out) when you continue to payment, not before." A tester or panelist clicking "No thanks" and checking the log now knows what to expect.
 
 **Manual:** the candidate's expectation is the same one a panelist would have — worth stating in the demo before showing the log.
+
+## T14 — 2026-09-16 — Fixture confirm echoed the wrong plan's price
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| retested confirm in fixture mode with the 3-year plan and caught the mismatch banner | fix to the fixture echo (chosen plan + its tax) |
+
+**Asked:** see `PROMPTS.md` T14.
+
+**Cause (fixture mode only):** the confirm fixture echoes a price so it reads like a real reply, and the echo used `order.premium_total`, which is set at quote time from `products[0]` (the 2-year plan). The shopper chose the 3-year. T12 had fixed the *validation* to use the chosen plan but not the *echo*, so the fixture "confirmed" the wrong price and the validation flagged it — correctly. Live mode never had the bug: XCover returns the real figure. Second, the echo set premium and total to the same number and kept the captured tax, so "US$197.60 (US$197.60 + tax US$7.88)" didn't add up.
+
+**Fixed:** plans stored with their tax at quote time; the echo uses the chosen plan's total and tax; `total_price` = inc-tax, `total_premium` = total − tax, per the live shape. **Verified:** 2-year chosen → quoted = confirmed, no review; 3-year chosen → quoted = confirmed, no review; premium + tax = total.
+
+**Manual:** the same bug I had fixed on one side and not the other — the candidate's retest is what found the second half.

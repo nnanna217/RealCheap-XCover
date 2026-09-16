@@ -151,3 +151,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T13 — 2026-09-16 — Decline → opt-out timing (fixture mode)
 
 > "No thanks" doesn't seem to call the opt-out endpoint — I didn't see an opt-out call in the Integration log when I clicked it. *(cites the retail Opt-out Offer page)*
+
+## T14 — 2026-09-16 — Fixture confirm echoed the wrong plan's price
+
+> Still testing the newer changes in fixture mode: quoted $218.95 (3-year) but confirmed $197.60 — why?

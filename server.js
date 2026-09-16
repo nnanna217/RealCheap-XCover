@@ -132,7 +132,7 @@ app.post("/api/offers", async (req, res) => {
     // Live finding: total_amount is the rated TOTAL for context.product.quantity, not a unit price (A3 settled).
     premium_total: offer ? offer.products[0].details.finance.price.total_amount : null,
     premium_unit: offer ? Number((offer.products[0].details.finance.price.total_amount / quantity).toFixed(2)) : null,
-    plans: offer ? offer.products.map((p) => ({ quote_id: p.id, title: ((offer.content && offer.content.products) || []).find((c) => c.id === p.id)?.title || p.name, total: p.details.finance.price.total_amount, total_formatted: p.details.finance.price.total_amount_formatted })) : [],
+    plans: offer ? offer.products.map((p) => ({ quote_id: p.id, title: ((offer.content && offer.content.products) || []).find((c) => c.id === p.id)?.title || p.name, total: p.details.finance.price.total_amount, total_formatted: p.details.finance.price.total_amount_formatted, tax: Number((p.details.finance.tax && p.details.finance.tax.total_amount) || 0) })) : [],
     status: offer ? "quoted" : "no_offer",
   }, { event: "create offer", status: envelope.status, mode: envelope.mode, envelope });
 
@@ -206,7 +206,7 @@ app.post("/api/orders/:txn/confirm", async (req, res) => {
   let envelope;
   for (let attempt = 1; attempt <= 3; attempt++) {
     envelope = await xcover.call("POST", `offers/${offer_id}/confirm/`, body, fixture, { "x-idempotency-key": key },
-      { echoQuoteIds: true, echoTxn: txn, echoPolicyholder: true, echoPrice: { currency: order.offer_currency || "USD", total: order.premium_total || 0 } });
+      { echoQuoteIds: true, echoTxn: txn, echoPolicyholder: true, echoPrice: (() => { const cp = (order.plans || []).find((p) => quote_ids.includes(p.quote_id)); return { currency: order.offer_currency || "USD", total: cp ? cp.total : order.premium_total || 0, tax: cp ? cp.tax : 0 }; })() });
     attempts.push({ attempt, status: envelope.status, elapsed_ms: envelope.elapsed_ms });
     if (envelope.status !== 423) break;
     await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
