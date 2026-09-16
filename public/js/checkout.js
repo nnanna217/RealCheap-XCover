@@ -117,7 +117,7 @@ function renderOffer() {
       <button type="button" id="acceptBtn" class="buy-now-btn ${state.protection === "accepted" ? "selected" : ""}">${content.positive_cta || "Add protection"}</button>
       <button type="button" id="declineBtn" class="btn-secondary ${state.protection === "declined" ? "selected" : ""}">${content.negative_cta || "No thanks"}</button>
     </div>
-    ${state.protection === "declined" && content.negative_cta_warning ? `<p class="offer-warning">${content.negative_cta_warning}</p>` : ""}
+    ${state.protection === "declined" ? `<p class="offer-warning">${content.negative_cta_warning || "Are you sure?"} <span class="small muted">— You can still change your mind. Your decline is reported to XCover (opt-out) when you continue to payment, not before.</span></p>` : ""}
     <p class="muted small">${content.credibility_message || ""} ${pds}</p>
     <p class="muted small">${content.disclaimer || ""}</p>`;
 

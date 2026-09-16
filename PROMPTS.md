@@ -147,3 +147,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T12 — 2026-09-16 — Live API (VPN)
 
 > Staging is reachable with the VPN on. Consolidate the other chat's findings here, make any corrections, and test the live credentials. *(Other session's findings pasted: auth works; schema default `cse-interview-retail`; two plans; superset response; real copy; 3-year cheaper than 2-year; ~47% premium; VPN resolver broken; `products[0]` only; sub-heading "N/A".)*
+
+## T13 — 2026-09-16 — Decline → opt-out timing (fixture mode)
+
+> "No thanks" doesn't seem to call the opt-out endpoint — I didn't see an opt-out call in the Integration log when I clicked it. *(cites the retail Opt-out Offer page)*

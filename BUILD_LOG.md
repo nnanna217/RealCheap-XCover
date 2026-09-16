@@ -614,3 +614,17 @@ And one that was neither: **T6**, the silent failed confirm — written on purpo
 **Verified:** fixture mode end to end with the captures (plan picker, extras as benefits, no "N/A", chosen 3-year plan confirmed, token scrubbed in COI URL, refund `$1,098.00 + €234.06`, guard on/off); live GBP pass through the app (quote → confirm 3Y → repeat from ledger → cancel → repeat from ledger). Three test bookings created on staging and all cancelled.
 
 **Demo hazards (from the live data, say them first):** prices change every call and the 3-year can be cheaper than the 2-year; a plan can be ~50% of the laptop price; the staging partner quotes accessories. **Operational risk:** staging needed the VPN from this network — confirm it resolves with the VPN off, and if not, set DNS to 1.1.1.1 while connected before Thursday.
+
+## T13 — 2026-09-16 — Decline → opt-out timing
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| retested the decline path in fixture mode; expected the opt-out call on the click | verified the call fires at Continue (by design, P9); made the page say so |
+
+**Asked:** see `PROMPTS.md` T13.
+
+**Not a bug — a design decision that was invisible.** Verified in the browser: after "No thanks" the log shows only `create offer`; after Continue to payment it shows `opt out … 204`. P9 deliberately reports the decline when the decision is *frozen* (the cart locks at Continue), not on the click: the endpoint has no undo, a shopper can still switch to "Add protection" before paying, and an abandoned checkout is not a decline. Reporting on the click would hand XCover wrong conversion data.
+
+**Changed:** the decline warning now reads "…You can still change your mind. Your decline is reported to XCover (opt-out) when you continue to payment, not before." A tester or panelist clicking "No thanks" and checking the log now knows what to expect.
+
+**Manual:** the candidate's expectation is the same one a panelist would have — worth stating in the demo before showing the log.
