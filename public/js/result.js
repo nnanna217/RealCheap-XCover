@@ -5,7 +5,9 @@ const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const money = (n, c) => new Intl.NumberFormat(undefined, { style: "currency", currency: c }).format(n);
 const txn = new URLSearchParams(window.location.search).get("txn");
 
+let MODE = "fixture";
 async function load() {
+  try { MODE = (await (await fetch("/api/status")).json()).mode || "fixture"; } catch { /* keep default */ }
   const res = await fetch(`/api/orders/${encodeURIComponent(txn)}`);
   if (!res.ok) { $("result").innerHTML = `<p class="error-message">Order not found. <a href="/">Back to catalog</a></p>`; return; }
   render(await res.json());
@@ -44,8 +46,8 @@ function render(o) {
       ${o.needs_review ? `<p class="offer-warning"><strong>Needs review:</strong> ${o.needs_review.map((r) => `${r.code} — ${typeof r.detail === "string" ? r.detail : JSON.stringify(r.detail)}`).join("; ")}</p>` : ""}
       <div class="demo-tools">
         <button type="button" id="retryBtn" class="btn-secondary">Demo: re-send the same confirm</button>
-        <label class="small muted"><input type="checkbox" id="retryBypass"> bypass the ledger — let XCover answer</label>
-        <span class="small muted" id="retryMsg">Simulates a retried request after a timeout. Unticked: the ledger answers, XCover is not called. Ticked: the same key reaches XCover, which replies 409 with the cached original — treated as success.</span>
+        ${MODE === "fixture" ? `<label class="small muted"><input type="checkbox" id="retryBypass"> bypass the ledger — let XCover answer</label>` : ""}
+        <span class="small muted" id="retryMsg">Simulates a retried request after a timeout. The ledger answers; XCover is not called.${MODE === "fixture" ? " Tick the box to let the same key reach XCover, which replies 409 with the cached original — treated as success." : " <em>Live mode: the bypass demo is off by design (demo hooks exist only in fixture mode); on staging the same key returned 409 and a new key returned 422 — recorded in BUILD_LOG T12.</em>"}</span>
       </div>
     </section>` : o.protection === "accepted" && o.payment ? `
     <section class="policy-card pending">
@@ -66,13 +68,13 @@ function render(o) {
         <tbody>${o.history.filter((h) => h.webhook).map((h) => `<tr><td>${new Date(h.at).toLocaleTimeString()}</td><td><code>${h.webhook.body.event}</code> <span class="muted">(${h.webhook.source})</span></td><td>${h.webhook.matched_by || "—"}</td><td><span class="call-status ${h.outcome === "applied" ? "ok" : ""}">${h.outcome}</span></td></tr>`).join("")}</tbody>
       </table>` : `<p class="small muted">None yet. XCover sends <code>BOOKING_CREATED</code> on confirm and <code>BOOKING_CANCELLED</code> on cancel; each is signed, verified, deduped, and routed to this order by <code>partner_transaction_id</code>.</p>`}
       ${o.refund_due ? `<p class="offer-warning">XCover reports this booking cancelled and no RealCheap refund is on record — premium refund of ${money(o.refund_due.premium, o.refund_due.currency || "USD")} is <strong>due</strong> to the customer.</p>` : ""}
-      <div class="demo-tools">
+      ${MODE === "fixture" ? `<div class="demo-tools">
         <select id="whEvent" class="small"><option>BOOKING_CREATED</option><option>BOOKING_UPDATED</option><option selected>BOOKING_CANCELLED</option></select>
         <button type="button" id="whBtn" class="btn-secondary">Demo: simulate this webhook</button>
         <label class="small muted"><input type="checkbox" id="whTamper"> bad signature</label>
         <label class="small muted"><input type="checkbox" id="whNoTxn"> null partner_transaction_id</label>
         <span class="small muted" id="whMsg">Signed as XCover would, delivered to this server's /api/webhooks.</span>
-      </div>
+      </div>` : `<p class="small muted"><em>Live mode: the webhook simulator is off by design (it signs with the real secret — a forged-event vector in production). Real XCover webhooks need a registered listener URL; see README.</em></p>`}
     </section>` : ""}
 
     ${o.payment ? `
@@ -129,7 +131,7 @@ function render(o) {
     retry.disabled = true;
     const res = await fetch(`/api/orders/${encodeURIComponent(txn)}/confirm`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: o.policyholder || b.policyholder, force_xcover: $("retryBypass").checked }),
+      body: JSON.stringify({ offer_id: o.offer_id, quote_ids: o.quote_ids, policyholder: o.policyholder || b.policyholder, force_xcover: !!($("retryBypass") && $("retryBypass").checked) }),
     });
     const r = await res.json();
     $("retryMsg").innerHTML = r.served_from === "ledger"

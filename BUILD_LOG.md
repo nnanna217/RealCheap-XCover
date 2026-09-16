@@ -642,3 +642,19 @@ And one that was neither: **T6**, the silent failed confirm — written on purpo
 **Fixed:** plans stored with their tax at quote time; the echo uses the chosen plan's total and tax; `total_price` = inc-tax, `total_premium` = total − tax, per the live shape. **Verified:** 2-year chosen → quoted = confirmed, no review; 3-year chosen → quoted = confirmed, no review; premium + tax = total.
 
 **Manual:** the same bug I had fixed on one side and not the other — the candidate's retest is what found the second half.
+
+## T15 — 2026-09-16 — Demo controls in live mode
+
+| Candidate (by hand) | Agent (Claude Code) |
+|---|---|
+| tested live mode and noticed the demo controls were still shown and the bypass silently fell back to the ledger | made the page mode-aware: fixture-only controls hidden in live with a note; Date serialisation fix |
+
+**Asked:** see `PROMPTS.md` T15.
+
+**Agent's imprecision.** The red-team gating (T11) made every demo hook fixture-only *on the server* — `/api/demo/webhook` → 404, `force_xcover` ignored — but the front end still rendered the controls, so in live mode a click produced an error, or a ledger answer, with no explanation. "Disabled" was the wrong word; nothing on the page reflected it. Both observations were correct: the bypass fell back to the ledger in live mode *by design*, invisibly.
+
+**Fixed:** `/api/status` now reports `mode`; the result page reads it and, in live mode, hides the webhook simulator and the bypass checkbox, each replaced by a one-line note saying why (the simulator signs with the real secret; the bypass is a demo hook; and what staging actually returned — 409 same key / 422 new key — is in T12). In fixture mode everything is as before. Also fixed: the secret-scrubber flattened `Date` objects to `{}` (seen in `/api/status`).
+
+**Verified:** fixture mode → checkbox and simulator present; live mode → both absent, notes shown, LIVE badge. Live test booking `ARGJG-2K626-INS` created and cancelled.
+
+**Manual:** the candidate tested the mode the demo won't use, which is how you find the gaps the demo would never show.

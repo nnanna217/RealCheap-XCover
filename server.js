@@ -21,6 +21,7 @@ app.use((req, res, next) => {
   next();
 });
 function scrubSecrets(v) {
+  if (v instanceof Date) return v.toISOString();
   if (Array.isArray(v)) return v.map(scrubSecrets);
   if (v && typeof v === "object") {
     const out = {};
@@ -42,7 +43,7 @@ app.get("/", (req, res) => {
 
 // API example route
 app.get("/api/status", (req, res) => {
-  res.json({ status: "Server is running", timestamp: new Date() });
+  res.json({ status: "Server is running", timestamp: new Date(), mode: xcover.MODE });
 });
 
 // POST /api/offers - create an XCover offer for the cart

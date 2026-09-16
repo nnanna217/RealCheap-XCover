@@ -155,3 +155,7 @@ Prompts the candidate gives after exercising the whole system end to end. Each i
 ## T14 — 2026-09-16 — Fixture confirm echoed the wrong plan's price
 
 > Still testing the newer changes in fixture mode: quoted $218.95 (3-year) but confirmed $197.60 — why?
+
+## T15 — 2026-09-16 — Demo controls in live mode
+
+> In live mode the "bad signature" / demo webhook buttons don't seem disabled in the front end — is that what you meant, or a mistake? And "bypass the ledger — let XCover answer" reads from the ledger in live mode; not yet retested in fixture mode.
