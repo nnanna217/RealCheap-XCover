@@ -12,7 +12,7 @@ npm start                # http://localhost:3000
 
 `npm start` does not watch for file changes — restart it after pulling.
 
-**No credentials needed to run it.** `XCOVER_MODE` defaults to `fixture`: every XCover call is built and signed exactly as it would be, but the response comes from `fixtures/offer-response.json` (hand-written from the retail Offers API schema) and the page labels it `fixture`.
+**No credentials needed to run it.** `XCOVER_MODE` defaults to `fixture`: every XCover call is built and signed exactly as it would be, but the response comes from `fixtures/` — scrubbed live captures from XCover staging — and the page labels it `fixture`.
 
 To hit the staging API, set in `.env`:
 
@@ -24,6 +24,10 @@ XCOVER_SCHEMA=…             # retail offer schema identifier, from the CSE
 ```
 
 The page then labels responses `live`. Nothing else changes — the request shape, the signing, and the UI are identical in both modes.
+
+**Live status (2026-09-16):** the full path has run against staging — create offer (4 currencies), confirm, replay (409), opt-out (204), cancel preview, cancel, repeat cancel (422). Every fixture is now a scrubbed live capture. Staging needed a VPN from this network and its prices are randomised test rates.
+
+Optional knobs: `RC_ELIGIBLE_CATEGORIES=electronics/` makes RealCheap decline to ask XCover for other categories (staging's `E3CCM` has no eligibility rule of its own and will quote a $4 sleeve); `XCOVER_PAYMENT_PROVIDER=stripe` sends `payment_details` (unset = omitted; payment is simulated here).
 
 Manual signed calls: `scripts/xcover-curl.sh POST offers/ '<json>'` (reads `.env`).
 
@@ -48,7 +52,7 @@ Manual signed calls: `scripts/xcover-curl.sh POST offers/ '<json>'` (reads `.env
 | `idempotency.js` | `x-idempotency-key` derived as UUID v5 of the natural key, for confirm and cancel |
 | `orders.js` | The in-memory order ledger keyed by `transaction_id`; every XCover call and webhook is appended to the order's history |
 | `webhooks.js` | Inbound `BOOKING_*` routing (by `partner_transaction_id`, fallback booking id), dedup, ordering guard, refund-due flag |
-| `fixtures/` | Recorded XCover replies for fixture mode: offers per currency, the documented 422, confirm 200/409/423, cancel, opt-out. Structure from the specs, values placeholders; fresh ids and echoed request values per call |
+| `fixtures/` | **Live captures from XCover staging (2026-09-16), `security_token` scrubbed**: offers per currency, confirm 200 / 409 (replay) / 422 (new key on a booked offer), cancel preview / cancel / 422 (already cancelled), opt-out 204. Two hand-written exceptions, labelled: the ineligible 422 (staging never produces one) and the 423. In fixture mode the client re-mints ids and echoes request values per call, as the real API does |
 | `scripts/` | `xcover-curl.sh` (signed manual call), `send-webhook.sh` (signed simulated webhook) |
 
 **How it was built** — the record for the AI-methodology discussion.
